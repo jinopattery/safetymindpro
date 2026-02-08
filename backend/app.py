@@ -4,7 +4,7 @@ SafetyMindPro FastAPI Application
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from backend.database import init_db
-from backend.routers import fmea, fta, upload
+from backend.routers import fmea, fta, upload, export
 
 # Initialize database
 init_db()
@@ -28,6 +28,7 @@ app.add_middleware(
 app.include_router(fmea.router)
 app.include_router(fta.router)
 app.include_router(upload.router)
+app.include_router(export.router)
 
 @app.get("/")
 def read_root():
@@ -39,7 +40,8 @@ def read_root():
         "endpoints": {
             "fmea": "/api/v1/fmea/analyses",
             "fta": "/api/v1/fta/trees",
-            "upload": "/api/v1/upload"
+            "upload": "/api/v1/upload",
+            "export": "/api/v1/fmea/analyses/{id}/export"
         }
     }
 
