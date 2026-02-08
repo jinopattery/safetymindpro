@@ -1,54 +1,84 @@
-# Installation Instructions for safetymindpro
+# SafetyMindPro Installation Guide
 
 ## Prerequisites
-Before you begin the installation process, ensure you have the following prerequisites installed:
-- [Node.js](https://nodejs.org/): Version 12 or higher
-- [npm](https://www.npmjs.com/): Version 6 or higher (comes with Node.js)
-- A package manager like yarn (optional)
 
-## Step-by-Step Installation
-Follow these steps to install the `safetymindpro` package:
+Before installing SafetyMindPro, ensure you have:
 
-1. **Clone the Repository**  
-   Open your terminal and run the following command:  
-   ```bash  
-   git clone https://github.com/jinopattery/safetymindpro.git  
-   ```  
+- **Python 3.9 or higher** - [Download Python](https://www.python.org/downloads/)
+- **Git** - [Download Git](https://git-scm.com/downloads)
+- **pip** (comes with Python)
 
-2. **Navigate into the project directory**  
-   ```bash  
-   cd safetymindpro  
-   ```  
+## Installation Steps
 
-3. **Install Dependencies**  
-   You can use npm or yarn to install the project dependencies. Choose one of the following commands:  
-   Using npm:  
-   ```bash  
-   npm install  
-   ```  
-   Or using yarn:  
-   ```bash  
-   yarn install  
-   ```  
+### Step 1: Clone the Repository
 
-4. **Start the Application**  
-   Once the installation is complete, start the application:  
-   ```bash  
-   npm start  
-   ```  
-   Or if you're using yarn:  
-   ```bash  
-   yarn start  
-   ```  
+```bash
+git clone https://github.com/jinopattery/safetymindpro.git
+cd safetymindpro
+```
+
+### Step 2: Create Virtual Environment
+
+**Windows:**
+```bash
+python -m venv venv
+venv\Scripts\activate
+```
+
+**Mac/Linux:**
+```bash
+python3 -m venv venv
+source venv/bin/activate
+```
+
+### Step 3: Install Dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+### Step 4: Set Up Environment
+
+**Windows:**
+```bash
+copy .env.example .env
+```
+
+**Mac/Linux:**
+```bash
+cp .env.example .env
+```
+
+### Step 5: Run the Application
+
+```bash
+python backend/app.py
+```
+
+Or:
+```bash
+uvicorn backend.app:app --reload --host 0.0.0.0 --port 8000
+```
+
+### Step 6: Access the Application
+
+- API Documentation: http://localhost:8000/docs
+- API: http://localhost:8000/api/v1
+
+## Testing
+
+```bash
+pytest tests/
+```
 
 ## Common Issues
-- **Dependency Errors**: If you encounter issues related to missing dependencies, try running `npm install` or `yarn install` again.
-- **Port in Use**: If you see an error about the port already being in use, you can either stop the service running on that port or specify a different port.
-- **File Not Found**: Ensure that you have cloned the repository correctly and are in the right directory.
+
+- **Python not found:** Add Python to PATH
+- **Port in use:** Change PORT in .env file
+- **Permission denied:** Run as administrator (Windows) or use sudo (Mac/Linux)
 
 ## Next Steps
-- Explore the documentation for more features and usage instructions.
-- Check for any updates or enhancements in the `CHANGELOG.md` file.
-- Consider contributing by submitting pull requests or raising issues on GitHub.
 
-For further assistance, feel free to reach out on the repository's issues page or consult the community forums.
+1. Check API docs at http://localhost:8000/docs
+2. Load sample data: `python scripts/load_sample_data.py`
+3. Read documentation in /docs folder
