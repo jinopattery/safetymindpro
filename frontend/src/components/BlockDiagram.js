@@ -1,116 +1,71 @@
-import React, { useCallback, useState } from 'react';
-import ReactFlow, {
-  MiniMap,
-  Controls,
-  Background,
-  useNodesState,
-  useEdgesState,
-  addEdge,
-  Panel,
-} from 'reactflow';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import ReactFlow, { MiniMap, Controls, Background, useNodesState, useEdgesState, addEdge } from 'reactflow';
 import 'reactflow/dist/style.css';
 
-const initialNodes = [
-  {
-    id: '1',
-    type: 'input',
-    data: { label: 'System Input' },
-    position: { x: 250, y: 25 },
-    style: { background: '#3498db', color: 'white', border: '2px solid #2980b9', borderRadius: '8px', padding: '10px' }
-  },
-  {
-    id: '2',
-    data: { label: 'Control Unit' },
-    position: { x: 250, y: 125 },
-    style: { background: '#9b59b6', color: 'white', border: '2px solid #8e44ad', borderRadius: '8px', padding: '10px' }
-  },
-  {
-    id: '3',
-    data: { label: 'Processing Module' },
-    position: { x: 100, y: 250 },
-    style: { background: '#e67e22', color: 'white', border: '2px solid #d35400', borderRadius: '8px', padding: '10px' }
-  },
-  {
-    id: '4',
-    data: { label: 'Output Module' },
-    position: { x: 400, y: 250 },
-    style: { background: '#e67e22', color: 'white', border: '2px solid #d35400', borderRadius: '8px', padding: '10px' }
-  },
-  {
-    id: '5',
-    type: 'output',
-    data: { label: 'System Output' },
-    position: { x: 250, y: 375 },
-    style: { background: '#27ae60', color: 'white', border: '2px solid #229954', borderRadius: '8px', padding: '10px' }
-  },
-];
-
-const initialEdges = [
-  { id: 'e1-2', source: '1', target: '2', animated: true, style: { stroke: '#3498db', strokeWidth: 2 } },
-  { id: 'e2-3', source: '2', target: '3', animated: true, style: { stroke: '#9b59b6', strokeWidth: 2 } },
-  { id: 'e2-4', source: '2', target: '4', animated: true, style: { stroke: '#9b59b6', strokeWidth: 2 } },
-  { id: 'e3-5', source: '3', target: '5', animated: true, style: { stroke: '#e67e22', strokeWidth: 2 } },
-  { id: 'e4-5', source: '4', target: '5', animated: true, style: { stroke: '#e67e22', strokeWidth: 2 } },
-];
-
 function BlockDiagram({ analysisId }) {
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
-  const [selectedNode, setSelectedNode] = useState(null);
+    const [nodes, setNodes, onNodesChange] = useNodesState([]);
+    const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+    const [saving, setSaving] = useState(false);
+    const [saveMessage, setSaveMessage] = useState('');
 
-  const onConnect = useCallback(
-    (params) => setEdges((eds) => addEdge({ ...params, animated: true }, eds)),
-    [setEdges],
-  );
+    useEffect(() => { loadDiagram(); }, [analysisId]);
 
-  const onNodeClick = useCallback((event, node) => {
-    setSelectedNode(node);
-  }, []);
-
-  const addNewNode = () => {
-    const newNode = {
-      id: `${nodes.length + 1}`,
-      data: { label: `New Component ${nodes.length + 1}` },
-      position: { x: Math.random() * 500, y: Math.random() * 400 },
-      style: { background: '#34495e', color: 'white', border: '2px solid #2c3e50', borderRadius: '8px', padding: '10px' }
+    const loadDiagram = async () => {
+        try {
+            const response = await axios.get(`/api/v1/diagrams/load/${analysisId}/block`);
+            if (response.data.nodes) {
+                setNodes(response.data.nodes);
+                setEdges(response.data.edges);
+            }
+        } catch (error) {
+            initializeDefaultDiagram();
+        }
     };
-    setNodes((nds) => [...nds, newNode]);
-  };
 
-  return (
-    <div style={{ width: '100%', height: '600px', border: '1px solid #ddd', borderRadius: '8px' }}>
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onConnect={onConnect}
-        onNodeClick={onNodeClick}
-        fitView
-      >
-        <Controls />
-        <MiniMap 
-          nodeColor={(node) => {
-            if (node.type === 'input') return '#3498db';
-            if (node.type === 'output') return '#27ae60';
-            return '#9b59b6';
-          }}
-        />
-        <Background variant="dots" gap={12} size={1} />
-        <Panel position="top-left" style={{ background: 'white', padding: '10px', borderRadius: '8px' }}>
-          <h3 style={{ margin: '0 0 10px 0' }}>System Block Diagram</h3>
-          <button onClick={addNewNode} className="btn btn-primary" style={{ fontSize: '0.875rem' }}>
-            + Add Component
-          </button>
-          {selectedNode && (
-            <div style={{ marginTop: '10px', padding: '10px', background: '#f8f9fa', borderRadius: '4px' }}>
-              <strong>Selected:</strong> {selectedNode.data.label}
+    const initializeDefaultDiagram = () => {
+        setNodes([
+            { id: 'input', type: 'input', data: { label: 'Input' }, position: { x: 50, y: 150 }, style: { background: '#3498db', color: 'white', padding: '12px' }},
+            { id: 'process', type: 'default', data: { label: 'Process' }, position: { x: 250, y: 150 }, style: { background: '#2ecc71', color: 'white', padding: '12px' }},
+            { id: 'output', type: 'output', data: { label: 'Output' }, position: { x: 450, y: 150 }, style: { background: '#e74c3c', color: 'white', padding: '12px' }}
+        ]);
+        setEdges([
+            { id: 'e1-2', source: 'input', target: 'process', animated: true },
+            { id: 'e2-3', source: 'process', target: 'output', animated: true }
+        ]);
+    };
+
+    const saveDiagram = async () => {
+        setSaving(true);
+        try {
+            await axios.post('/api/v1/diagrams/save', { analysis_id: parseInt(analysisId), diagram_type: 'block', name: 'Block Diagram', nodes, edges });
+            setSaveMessage('✓ Saved!');
+        } catch (error) {
+            setSaveMessage('✗ Error');
+        } finally {
+            setSaving(false);
+            setTimeout(() => setSaveMessage(''), 3000);
+        }
+    };
+
+    return (
+        <div>
+            <div style={{ marginBottom: '10px', display: 'flex', justifyContent: 'space-between' }}>
+                <h3>Block Diagram</h3>
+                <div>
+                    <span style={{ color: saveMessage.includes('✓') ? 'green' : 'red', marginRight: '10px' }}>{saveMessage}</span>
+                    <button onClick={saveDiagram} disabled={saving}>{saving ? 'Saving...' : '💾 Save'}</button>
+                </div>
             </div>
-          )}
-        </Panel>
-      </ReactFlow>
-    </div>
-  );
+            <div style={{ height: '500px', border: '1px solid #ddd' }}>
+                <ReactFlow nodes={nodes} edges={edges} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} onConnect={(params) => setEdges((eds) => addEdge(params, eds))} fitView>
+                    <Controls />
+                    <MiniMap />
+                    <Background />
+                </ReactFlow>
+            </div>
+        </div>
+    );
 }
 
 export default BlockDiagram;
