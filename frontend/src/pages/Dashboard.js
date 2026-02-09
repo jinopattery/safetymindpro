@@ -1,13 +1,14 @@
 import React from 'react';
-import './Dashboard.css';
 
 const Dashboard = () => {
     return (
         <div className="dashboard">
             <h1>Dashboard</h1>
-            <button className="action-button">Action 1</button>
-            <button className="action-button">Action 2</button>
-            <button className="action-button">Action 3</button>
+            <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+                <button className="btn btn-primary">Action 1</button>
+                <button className="btn btn-primary">Action 2</button>
+                <button className="btn btn-primary">Action 3</button>
+            </div>
         </div>
     );
 };
