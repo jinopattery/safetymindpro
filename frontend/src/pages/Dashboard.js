@@ -1,1 +1,15 @@
-// Updated Dashboard.js content with new graphical visualization tools section and action button \n\nimport React from 'react';\nimport { Button } from 'antd'; \n\nconst Dashboard = () => {\n    return (\n        <div>\n            <h1>Dashboard</h1>\n            <div className='visualization-tools'>\n                <h2>Graphical Visualization Tools</h2>\n                <Button type='primary' onClick={() => handleVisualization('System Structure')}>System Structure</Button>\n                <Button type='primary' onClick={() => handleVisualization('Block Diagram')}>Block Diagram</Button>\n                <Button type='primary' onClick={() => handleVisualization('Fault Tree Analysis')}>Fault Tree Analysis</Button>\n                <Button type='primary' onClick={() => handleVisualization('Risk Matrix')}>Risk Matrix</Button>\n            </div>\n            <div className='recent-analyses'>\n                <h2>Recent Analyses</h2>\n                {/* Recent analyses table implementation */} \n                <table>\n                    <thead>\n                        <tr>\n                            <th>Analysis Name</th>\n                            <th>Actions</th>\n                        </tr>\n                    </thead>\n                    <tbody>\n                        <tr>\n                            <td>Analysis 1</td>\n                            <td><Button type='link'>Structure</Button></td>\n                        </tr>\n                        {/* More rows as needed */} \n                    </tbody>\n                </table>\n            </div>\n        </div>\n    ); \n};\n\nconst handleVisualization = (tool) => {\n    // Function to handle visualization tool actions\n    console.log(tool);\n};\n\nexport default Dashboard;
+import React from 'react';
+import './Dashboard.css';
+
+const Dashboard = () => {
+    return (
+        <div className="dashboard">
+            <h1>Dashboard</h1>
+            <button className="action-button">Action 1</button>
+            <button className="action-button">Action 2</button>
+            <button className="action-button">Action 3</button>
+        </div>
+    );
+};
+
+export default Dashboard;
