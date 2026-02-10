@@ -5,6 +5,7 @@ from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field
 from enum import Enum
 
+from backend.domains.automotive.calculations import calculate_rpn
 
 class FailureSeverity(str, Enum):
     """Failure severity ratings"""
@@ -41,11 +42,11 @@ class FailureMode(BaseModel):
     
     def calculate_rpn(self) -> int:
         """Calculate Risk Priority Number
-        
+
         Returns:
             RPN value
         """
-        self.rpn = self.severity * self.occurrence * self.detection
+        self.rpn = calculate_rpn(self.severity, self.occurrence, self.detection)
         return self.rpn
 
 
@@ -79,7 +80,7 @@ class FMEAAnalysis(BaseModel):
     
     def get_high_risk_failures(self, threshold: int = 100) -> List[FailureMode]:
         """Get failure modes with RPN above threshold
-        
+
         Args:
             threshold: RPN threshold
             
@@ -90,7 +91,7 @@ class FMEAAnalysis(BaseModel):
     
     def get_component_failures(self, component_id: str) -> List[FailureMode]:
         """Get all failure modes for a component
-        
+
         Args:
             component_id: Component identifier
             
