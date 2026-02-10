@@ -1,0 +1,125 @@
+# Financial Domain Styling Configuration
+# This file defines the visual appearance for banking and fraud detection diagrams
+
+domain: financial
+display_name: "Financial Services"
+
+# Node styling for different financial node types
+node_styles:
+  account:
+    shape: rectangle
+    backgroundColor: "#27ae60"
+    color: "#ffffff"
+    borderColor: "#229954"
+    borderWidth: 2
+    fontSize: 13
+    padding: 12
+    borderRadius: 6
+    icon: "💰"
+    
+  transaction:
+    shape: diamond
+    backgroundColor: "#3498db"
+    color: "#ffffff"
+    borderColor: "#2980b9"
+    borderWidth: 2
+    fontSize: 11
+    padding: 8
+    icon: "💸"
+    
+  entity:
+    shape: circle
+    backgroundColor: "#9b59b6"
+    color: "#ffffff"
+    borderColor: "#8e44ad"
+    borderWidth: 2
+    fontSize: 12
+    padding: 10
+    icon: "👤"
+    
+  fraud_case:
+    shape: star
+    backgroundColor: "#e74c3c"
+    color: "#ffffff"
+    borderColor: "#c0392b"
+    borderWidth: 3
+    fontSize: 12
+    padding: 10
+    pulsate: true
+    icon: "🚨"
+
+# Edge styling for different transaction types
+edge_styles:
+  transfer:
+    stroke: "#27ae60"
+    strokeWidth: 2
+    animated: true
+    type: smoothstep
+    arrowSize: 8
+    label: "Transfer"
+    
+  ownership:
+    stroke: "#9b59b6"
+    strokeWidth: 1.5
+    type: straight
+    arrowSize: 6
+    label: "Owns"
+    
+  relationship:
+    stroke: "#95a5a6"
+    strokeWidth: 1
+    strokeDasharray: "4,2"
+    type: smoothstep
+    label: "Related"
+    
+  fraud_link:
+    stroke: "#e74c3c"
+    strokeWidth: 3
+    strokeDasharray: "6,3"
+    animated: true
+    type: step
+    arrowSize: 10
+    label: "Fraud Link"
+
+# Overall theme settings
+theme:
+  name: "Financial"
+  primaryColor: "#27ae60"
+  dangerColor: "#e74c3c"
+  successColor: "#2ecc71"
+  warningColor: "#f39c12"
+  backgroundColor: "#ecf0f1"
+  gridColor: "#bdc3c7"
+  gridSize: 20
+  snapToGrid: true
+
+# Account type specific colors
+account_type_colors:
+  checking: "#27ae60"
+  savings: "#16a085"
+  credit: "#e67e22"
+  loan: "#c0392b"
+  investment: "#9b59b6"
+  business: "#2980b9"
+  merchant: "#f39c12"
+
+# Risk level colors
+risk_level_colors:
+  low: "#2ecc71"
+  medium: "#f39c12"
+  high: "#e67e22"
+  critical: "#c0392b"
+
+# Fraud severity colors
+fraud_severity:
+  low: "#f39c12"      # Severity 1-3
+  medium: "#e67e22"   # Severity 4-6
+  high: "#e74c3c"     # Severity 7-9
+  critical: "#c0392b" # Severity 10
+
+# Transaction size categories
+transaction_sizes:
+  small: "#3498db"     # < $100
+  medium: "#2980b9"    # $100-$1000
+  large: "#2c3e50"     # $1000-$10,000
+  very_large: "#8e44ad" # > $10,000

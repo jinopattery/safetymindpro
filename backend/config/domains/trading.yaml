@@ -1,0 +1,140 @@
+# Trading Domain Styling Configuration
+# This file defines the visual appearance for trading and portfolio diagrams
+
+domain: trading
+display_name: "Trading & Markets"
+
+# Node styling for different trading node types
+node_styles:
+  asset:
+    shape: hexagon
+    backgroundColor: "#3498db"
+    color: "#ffffff"
+    borderColor: "#2980b9"
+    borderWidth: 2
+    fontSize: 13
+    padding: 12
+    borderRadius: 4
+    icon: "📈"
+    
+  portfolio:
+    shape: rectangle
+    backgroundColor: "#9b59b6"
+    color: "#ffffff"
+    borderColor: "#8e44ad"
+    borderWidth: 3
+    fontSize: 14
+    padding: 15
+    borderRadius: 8
+    icon: "💼"
+    
+  position:
+    shape: diamond
+    backgroundColor: "#16a085"
+    color: "#ffffff"
+    borderColor: "#1abc9c"
+    borderWidth: 2
+    fontSize: 11
+    padding: 8
+    icon: "📊"
+    
+  market_event:
+    shape: star
+    backgroundColor: "#e67e22"
+    color: "#ffffff"
+    borderColor: "#d35400"
+    borderWidth: 2
+    fontSize: 12
+    padding: 10
+    icon: "⚡"
+
+# Edge styling for different relationship types
+edge_styles:
+  correlation:
+    stroke: "#95a5a6"
+    strokeWidth: 2
+    type: straight
+    strokeDasharray: "5,5"
+    label: "Correlation"
+    
+  holding:
+    stroke: "#9b59b6"
+    strokeWidth: 2
+    animated: false
+    type: smoothstep
+    arrowSize: 7
+    label: "Holds"
+    
+  dependency:
+    stroke: "#e67e22"
+    strokeWidth: 2.5
+    animated: true
+    type: step
+    arrowSize: 8
+    label: "Depends On"
+    
+  impact:
+    stroke: "#e74c3c"
+    strokeWidth: 3
+    animated: true
+    type: smoothstep
+    arrowSize: 9
+    strokeDasharray: "8,4"
+    label: "Impact"
+
+# Overall theme settings
+theme:
+  name: "Trading"
+  primaryColor: "#3498db"
+  dangerColor: "#e74c3c"
+  successColor: "#27ae60"
+  warningColor: "#f39c12"
+  backgroundColor: "#2c3e50"
+  gridColor: "#34495e"
+  gridSize: 25
+  snapToGrid: true
+  darkMode: true
+
+# Asset type specific colors
+asset_type_colors:
+  stock: "#3498db"
+  bond: "#2ecc71"
+  etf: "#9b59b6"
+  option: "#f39c12"
+  future: "#e67e22"
+  crypto: "#e74c3c"
+  commodity: "#95a5a6"
+  forex: "#16a085"
+
+# Risk category colors
+risk_category_colors:
+  conservative: "#2ecc71"
+  moderate: "#3498db"
+  aggressive: "#e67e22"
+  speculative: "#e74c3c"
+
+# Position type colors
+position_type_colors:
+  long: "#27ae60"
+  short: "#e74c3c"
+
+# Correlation strength colors
+correlation_strength:
+  strong_positive: "#27ae60"   # > 0.7
+  moderate_positive: "#3498db" # 0.3 - 0.7
+  weak: "#95a5a6"             # -0.3 - 0.3
+  moderate_negative: "#e67e22" # -0.7 - -0.3
+  strong_negative: "#e74c3c"   # < -0.7
+
+# Market impact colors
+market_impact:
+  positive: "#27ae60"
+  neutral: "#95a5a6"
+  negative: "#e74c3c"
+
+# Volatility levels
+volatility_levels:
+  low: "#2ecc71"      # < 15%
+  moderate: "#3498db"  # 15-30%
+  high: "#e67e22"      # 30-50%
+  extreme: "#e74c3c"   # > 50%

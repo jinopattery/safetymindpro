@@ -1,73 +1,71 @@
 """
-Database models for SafetyMindPro
+Database Models with User Management
 """
-from sqlalchemy import Column, Integer, String, Float, DateTime, Text, ForeignKey, JSON
+
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Text, JSON
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from backend.database import Base
 
-
-class FMEAAnalysis(Base):
-    """FMEA Analysis model"""
-    __tablename__ = "fmea_analyses"
+class User(Base):
+    __tablename__ = "users"
     
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, index=True)
-    description = Column(Text, nullable=True)
-    system = Column(String, index=True)
-    subsystem = Column(String, nullable=True)
+    email = Column(String, unique=True, index=True, nullable=False)
+    username = Column(String, unique=True, index=True, nullable=False)
+    hashed_password = Column(String, nullable=False)
+    full_name = Column(String)
+    is_active = Column(Boolean, default=True)
+    is_superuser = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    last_login = Column(DateTime)
+    
+    # Relationships
+    projects = relationship("Project", back_populates="owner")
+    graphs = relationship("Graph", back_populates="owner")
+
+class Project(Base):
+    __tablename__ = "projects"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    description = Column(Text)
+    domain = Column(String, nullable=False)
+    owner_id = Column(Integer, ForeignKey("users.id"))
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    is_public = Column(Boolean, default=False)
+    
+    # Relationships
+    owner = relationship("User", back_populates="projects")
+    graphs = relationship("Graph", back_populates="project")
+
+class Graph(Base):
+    __tablename__ = "graphs"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    domain = Column(String, nullable=False)
+    graph_data = Column(JSON)
+    project_id = Column(Integer, ForeignKey("projects.id"))
+    owner_id = Column(Integer, ForeignKey("users.id"))
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
-    failure_modes = relationship("FailureMode", back_populates="analysis", cascade="all, delete-orphan")
+    project = relationship("Project", back_populates="graphs")
+    owner = relationship("User", back_populates="graphs")
+    analysis_results = relationship("AnalysisResult", back_populates="graph")
 
-
-class FailureMode(Base):
-    """Failure Mode model"""
-    __tablename__ = "failure_modes"
+class AnalysisResult(Base):
+    __tablename__ = "analysis_results"
     
     id = Column(Integer, primary_key=True, index=True)
-    analysis_id = Column(Integer, ForeignKey("fmea_analyses.id"))
-    
-    # FMEA fields
-    component = Column(String, index=True)
-    function = Column(String)
-    failure_mode = Column(String)
-    failure_effects = Column(Text)
-    failure_causes = Column(Text)
-    
-    # Risk assessment
-    severity = Column(Integer)  # 1-10
-    occurrence = Column(Integer)  # 1-10
-    detection = Column(Integer)  # 1-10
-    rpn = Column(Integer)  # Risk Priority Number (S * O * D)
-    
-    # Actions
-    current_controls = Column(Text, nullable=True)
-    recommended_actions = Column(Text, nullable=True)
-    responsibility = Column(String, nullable=True)
-    target_date = Column(DateTime, nullable=True)
-    
+    graph_id = Column(Integer, ForeignKey("graphs.id"))
+    algorithm_name = Column(String, nullable=False)
+    results = Column(JSON)
+    parameters = Column(JSON)
     created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
-    analysis = relationship("FMEAAnalysis", back_populates="failure_modes")
-
-
-class FaultTree(Base):
-    """Fault Tree Analysis model"""
-    __tablename__ = "fault_trees"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, index=True)
-    description = Column(Text, nullable=True)
-    top_event = Column(String)
-    
-    # Graph data stored as JSON
-    nodes = Column(JSON)  # List of nodes
-    edges = Column(JSON)  # List of edges
-    
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    graph = relationship("Graph", back_populates="analysis_results")

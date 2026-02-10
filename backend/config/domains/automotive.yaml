@@ -1,0 +1,108 @@
+# Automotive Domain Styling Configuration
+# This file defines the visual appearance for automotive safety analysis diagrams
+
+domain: automotive
+display_name: "Automotive Safety"
+
+# Node styling for different automotive node types
+node_styles:
+  component:
+    shape: rectangle
+    backgroundColor: "#3498db"
+    color: "#ffffff"
+    borderColor: "#2980b9"
+    borderWidth: 2
+    fontSize: 14
+    padding: 12
+    borderRadius: 5
+    icon: "🔧"
+    
+  failure_mode:
+    shape: diamond
+    backgroundColor: "#e74c3c"
+    color: "#ffffff"
+    borderColor: "#c0392b"
+    borderWidth: 2
+    fontSize: 12
+    padding: 10
+    icon: "⚠️"
+    
+  fault_event:
+    shape: circle
+    backgroundColor: "#e67e22"
+    color: "#ffffff"
+    borderColor: "#d35400"
+    borderWidth: 2
+    fontSize: 12
+    icon: "🔴"
+    
+  system:
+    shape: rectangle
+    backgroundColor: "#2ecc71"
+    color: "#ffffff"
+    borderColor: "#27ae60"
+    borderWidth: 3
+    fontSize: 16
+    padding: 15
+    borderRadius: 8
+    icon: "🚗"
+
+# Edge styling for different relationship types
+edge_styles:
+  function_flow:
+    stroke: "#2ecc71"
+    strokeWidth: 2
+    animated: true
+    type: smoothstep
+    arrowSize: 8
+    label: "Function"
+    
+  failure_propagation:
+    stroke: "#e74c3c"
+    strokeWidth: 3
+    strokeDasharray: "5,5"
+    animated: true
+    type: step
+    arrowSize: 10
+    label: "Failure"
+    
+  component_hierarchy:
+    stroke: "#95a5a6"
+    strokeWidth: 1
+    type: straight
+    arrowSize: 6
+    label: "Contains"
+    
+  fault_tree_gate:
+    stroke: "#34495e"
+    strokeWidth: 2
+    type: smoothstep
+    arrowSize: 7
+
+# Overall theme settings
+theme:
+  name: "Automotive"
+  primaryColor: "#3498db"
+  dangerColor: "#e74c3c"
+  successColor: "#2ecc71"
+  warningColor: "#f39c12"
+  backgroundColor: "#ecf0f1"
+  gridColor: "#bdc3c7"
+  gridSize: 20
+  snapToGrid: true
+
+# Risk level color coding for FMEA
+risk_colors:
+  critical: "#c0392b"  # RPN >= 200
+  high: "#e74c3c"      # RPN >= 100
+  medium: "#f39c12"    # RPN >= 50
+  low: "#2ecc71"       # RPN < 50
+
+# Component type specific colors (optional overrides)
+component_colors:
+  engine: "#3498db"
+  transmission: "#9b59b6"
+  brake_system: "#e74c3c"
+  electrical: "#f39c12"
+  suspension: "#16a085"
+  body: "#95a5a6"

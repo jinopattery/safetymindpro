@@ -1,0 +1,101 @@
+.algorithm-panel {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.algorithm-panel h3 {
+  margin: 0 0 15px 0;
+  font-size: 1.3em;
+  color: #2d3748;
+}
+
+.algorithm-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 15px;
+}
+
+.algorithm-item {
+  padding: 12px;
+  background: #f8f9fa;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+}
+
+.algorithm-item:hover {
+  background: #e9ecef;
+}
+
+.algorithm-item.active {
+  background: #667eea;
+  color: white;
+  border-color: #5568d3;
+}
+
+.algorithm-name {
+  font-weight: 600;
+  font-size: 0.95em;
+  margin-bottom: 4px;
+}
+
+.algorithm-desc {
+  font-size: 0.8em;
+  opacity: 0.8;
+}
+
+.algorithm-config {
+  background: #f8f9fa;
+  padding: 15px;
+  border-radius: 8px;
+  margin-top: 10px;
+}
+
+.algorithm-config h4 {
+  margin: 0 0 12px 0;
+  font-size: 1em;
+  color: #495057;
+}
+
+.params-list {
+  margin-bottom: 15px;
+}
+
+.param-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.param-item label {
+  flex: 1;
+  font-size: 0.9em;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.param-item input {
+  width: 100px;
+  padding: 6px 10px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+}
+
+.no-params {
+  font-size: 0.9em;
+  color: #6c757d;
+  font-style: italic;
+  margin: 10px 0;
+}
+
+.algorithm-placeholder {
+  text-align: center;
+  padding: 40px 20px;
+  color: #6c757d;
+}

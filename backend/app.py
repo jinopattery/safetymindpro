@@ -1,56 +1,101 @@
 """
-SafetyMindPro FastAPI Application
+SafetyMindPro - Main FastAPI Application
+Production-Ready with User Management
 """
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from backend.database import init_db
-from backend.routers import fmea, fta, upload, export, diagrams
+from fastapi.responses import JSONResponse
+import logging
 
-# Initialize database
-init_db()
+from backend.database import engine, Base
 
+# Import only working routers
+from backend.routers import domains, auth
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Create database tables
+try:
+    Base.metadata.create_all(bind=engine)
+    logger.info("Database tables created successfully")
+except Exception as e:
+    logger.error(f"Error creating database tables: {e}")
+
+# Create FastAPI app
 app = FastAPI(
-    title="SafetyMindPro",
-    description="Safety Analysis Platform with FMEA/FTA Support",
-    version="1.0.0"
+    title="SafetyMindPro API",
+    description="Multi-Domain Graph Analysis Platform with User Management",
+    version="2.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc"
 )
 
-# CORS middleware
+# CORS Configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:8000",
+        "http://127.0.0.1:8000"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # Include routers
-app.include_router(fmea.router)
-app.include_router(fta.router)
-app.include_router(upload.router)
-app.include_router(export.router)
-app.include_router(diagrams.router)
+app.include_router(auth.router, prefix="/api/v1", tags=["Authentication"])
+app.include_router(domains.router, tags=["Domains"])
 
+# Root endpoint
 @app.get("/")
-def read_root():
-    """Root endpoint"""
+async def root():
+    """API root endpoint"""
     return {
-        "message": "SafetyMindPro API is running",
-        "version": "1.0.0",
-        "docs": "/docs",
+        "name": "SafetyMindPro API",
+        "version": "2.0.0",
+        "status": "running",
         "endpoints": {
-            "fmea": "/api/v1/fmea/analyses",
-            "fta": "/api/v1/fta/trees",
-            "upload": "/api/v1/upload",
-            "export": "/api/v1/fmea/analyses/{id}/export",
-            "diagrams": "/api/v1/diagrams"
+            "docs": "/docs",
+            "health": "/health",
+            "domains": "/api/v1/domains/",
+            "login": "/api/v1/auth/login",
+            "signup": "/api/v1/auth/signup"
         }
     }
 
+# Health check
 @app.get("/health")
-def health_check():
+async def health_check():
     """Health check endpoint"""
-    return {"status": "healthy"}
+    return {
+        "status": "healthy",
+        "version": "2.0.0"
+    }
+
+# Startup event
+@app.on_event("startup")
+async def startup_event():
+    logger.info("=" * 70)
+    logger.info("SafetyMindPro API Starting...")
+    logger.info("=" * 70)
+    logger.info("✅ API Documentation: http://127.0.0.1:8000/docs")
+    logger.info("✅ Health Check: http://127.0.0.1:8000/health")
+    logger.info("✅ Domains API: http://127.0.0.1:8000/api/v1/domains/")
+    logger.info("=" * 70)
+
+# Error handlers
+@app.exception_handler(Exception)
+async def global_exception_handler(request, exc):
+    logger.error(f"Global error: {str(exc)}", exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error. Check server logs."}
+    )
 
 if __name__ == "__main__":
     import uvicorn

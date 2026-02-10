@@ -1,0 +1,142 @@
+# Process Plant Domain Styling Configuration
+# This file defines the visual appearance for process plant monitoring diagrams
+
+domain: process_plant
+display_name: "Process Plant"
+
+# Node styling for different process plant node types
+node_styles:
+  equipment:
+    shape: rectangle
+    backgroundColor: "#2c3e50"
+    color: "#ffffff"
+    borderColor: "#34495e"
+    borderWidth: 2
+    fontSize: 13
+    padding: 12
+    borderRadius: 4
+    icon: "⚙️"
+    
+  sensor:
+    shape: circle
+    backgroundColor: "#16a085"
+    color: "#ffffff"
+    borderColor: "#1abc9c"
+    borderWidth: 2
+    fontSize: 11
+    padding: 8
+    icon: "📡"
+    
+  control_system:
+    shape: hexagon
+    backgroundColor: "#8e44ad"
+    color: "#ffffff"
+    borderColor: "#9b59b6"
+    borderWidth: 2
+    fontSize: 12
+    padding: 10
+    icon: "🎛️"
+    
+  anomaly:
+    shape: star
+    backgroundColor: "#e74c3c"
+    color: "#ffffff"
+    borderColor: "#c0392b"
+    borderWidth: 3
+    fontSize: 11
+    padding: 8
+    pulsate: true
+    icon: "🔴"
+
+# Edge styling for different flow types
+edge_styles:
+  mass_flow:
+    stroke: "#27ae60"
+    strokeWidth: 3
+    animated: true
+    type: smoothstep
+    arrowSize: 9
+    label: "Mass"
+    
+  temperature_flow:
+    stroke: "#e74c3c"
+    strokeWidth: 2
+    strokeDasharray: "8,4"
+    type: step
+    arrowSize: 7
+    label: "Temp"
+    
+  pressure_signal:
+    stroke: "#3498db"
+    strokeWidth: 2
+    type: straight
+    arrowSize: 7
+    label: "Pressure"
+    
+  control_signal:
+    stroke: "#9b59b6"
+    strokeWidth: 1.5
+    strokeDasharray: "4,2"
+    type: smoothstep
+    arrowSize: 6
+    label: "Control"
+    
+  energy_flow:
+    stroke: "#f39c12"
+    strokeWidth: 2.5
+    animated: true
+    type: step
+    arrowSize: 8
+    label: "Energy"
+
+# Overall theme settings
+theme:
+  name: "Process Plant"
+  primaryColor: "#2c3e50"
+  dangerColor: "#e74c3c"
+  successColor: "#27ae60"
+  warningColor: "#f39c12"
+  backgroundColor: "#ecf0f1"
+  gridColor: "#bdc3c7"
+  gridSize: 25
+  snapToGrid: true
+  showFlowAnimations: true
+
+# Equipment type specific colors (optional overrides)
+equipment_colors:
+  tank: "#2980b9"
+  pump: "#16a085"
+  heat_exchanger: "#e74c3c"
+  reactor: "#e67e22"
+  compressor: "#8e44ad"
+  valve: "#95a5a6"
+  separator: "#27ae60"
+  column: "#3498db"
+
+# Operational status colors
+status_colors:
+  normal: "#27ae60"
+  warning: "#f39c12"
+  critical: "#e74c3c"
+  shutdown: "#7f8c8d"
+
+# Anomaly severity colors
+anomaly_severity:
+  low: "#f39c12"      # Severity 1-3
+  medium: "#e67e22"   # Severity 4-6
+  high: "#e74c3c"     # Severity 7-9
+  critical: "#c0392b" # Severity 10
+
+# Temperature ranges visualization
+temperature_ranges:
+  cold: "#3498db"     # < 50°C
+  warm: "#f39c12"     # 50-150°C
+  hot: "#e67e22"      # 150-300°C
+  very_hot: "#e74c3c" # > 300°C
+
+# Pressure ranges visualization
+pressure_ranges:
+  low: "#3498db"      # < 5 bar
+  medium: "#2ecc71"   # 5-15 bar
+  high: "#f39c12"     # 15-50 bar
+  very_high: "#e74c3c" # > 50 bar

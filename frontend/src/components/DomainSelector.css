@@ -1,0 +1,94 @@
+.domain-selector {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.domain-selector h3 {
+  margin: 0 0 15px 0;
+  font-size: 1.3em;
+  color: #2d3748;
+}
+
+.domain-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.domain-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 15px;
+  background: #f8f9fa;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+}
+
+.domain-item:hover {
+  background: #e9ecef;
+  transform: translateX(5px);
+}
+
+.domain-item.active {
+  background: #667eea;
+  color: white;
+  border-color: #5568d3;
+}
+
+.domain-icon {
+  font-size: 2em;
+}
+
+.domain-details {
+  flex: 1;
+}
+
+.domain-name {
+  font-weight: 600;
+  font-size: 1.1em;
+  margin-bottom: 3px;
+}
+
+.domain-desc {
+  font-size: 0.85em;
+  opacity: 0.8;
+}
+
+.domain-info {
+  background: #f8f9fa;
+  padding: 15px;
+  border-radius: 8px;
+}
+
+.domain-info h4 {
+  margin: 0 0 10px 0;
+  color: #495057;
+}
+
+.info-section {
+  margin-bottom: 15px;
+}
+
+.info-section strong {
+  display: block;
+  margin-bottom: 5px;
+  color: #495057;
+}
+
+.info-section ul {
+  margin: 0;
+  padding-left: 20px;
+  list-style: none;
+}
+
+.info-section li {
+  padding: 3px 0;
+  font-size: 0.9em;
+}
