@@ -1,39 +1,16 @@
-"""
-Domain-specific modules
+# Domain-specific imports and registration calls commented out
 
-Auto-registers all domain adapters on import.
-"""
+# from .automotive import AutomotiveDomain
+# from .process_plant import ProcessPlantDomain
+# from .financial import FinancialDomain
+# from .trading import TradingDomain
 
-from backend.domains.base import DomainAdapter, DomainAlgorithm, StylingConfig
-from backend.domains.registry import registry, register_domain, get_domain, list_domains
+from .base import DomainAdapter, DomainAlgorithm, StylingConfig
+from .registry import registry, register_domain, get_domain, list_domains
 
-# Import domain adapters
-from backend.domains.automotive.adapter import AutomotiveDomain
-from backend.domains.process_plant.adapter import ProcessPlantDomain
-from backend.domains.financial.adapter import FinancialDomain
-from backend.domains.trading.adapter import TradingDomain
-
-# Auto-register domains
-def _register_all_domains():
-    """Auto-register all available domain adapters"""
-    register_domain(AutomotiveDomain())
-    register_domain(ProcessPlantDomain())
-    register_domain(FinancialDomain())
-    register_domain(TradingDomain())
-
-# Register on import
-_register_all_domains()
-
-__all__ = [
-    'DomainAdapter',
-    'DomainAlgorithm',
-    'StylingConfig',
-    'registry',
-    'register_domain',
-    'get_domain',
-    'list_domains',
-    'AutomotiveDomain',
-    'ProcessPlantDomain',
-    'FinancialDomain',
-    'TradingDomain'
-]
+# Commenting out domain-specific registration calls
+# _register_all_domains()  # This line should be commented out to disable all domains
+# AutomotiveDomain.register()  # Disable AutomotiveDomain
+# ProcessPlantDomain.register()  # Disable ProcessPlantDomain
+# FinancialDomain.register()  # Disable FinancialDomain
+# TradingDomain.register()  # Disable TradingDomain
