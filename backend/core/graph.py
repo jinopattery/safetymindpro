@@ -41,7 +41,7 @@ class Graph:
             directed: Whether the graph is directed
         """
         self.graph = nx.DiGraph() if directed else nx.Graph()
-        self.metadata: Dict[str, Any] = {}
+        self.graph_metadata: Dict[str, Any] = {}
     
     def add_node(self, node: NodeData) -> str:
         """Add a node to the graph
@@ -136,7 +136,7 @@ class Graph:
                 {'source': u, 'target': v, **data}
                 for u, v, data in self.graph.edges(data=True)
             ],
-            'metadata': self.metadata
+            'graph_metadata': self.graph_metadata
         }
     
     @classmethod
@@ -161,5 +161,5 @@ class Graph:
             edge = EdgeData(**edge_data)
             graph.add_edge(edge)
         
-        graph.metadata = data.get('metadata', {})
+        graph.graph_metadata = data.get('graph_metadata', data.get('metadata', {}))  # Support old 'metadata' key for backward compatibility
         return graph

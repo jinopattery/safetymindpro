@@ -41,7 +41,7 @@ class ProcessPlantMapper(DomainMapper):
         }
         """
         graph = UniversalGraph()
-        graph.metadata = {
+        graph.graph_metadata = {
             'domain': 'process_plant',
             'created_at': datetime.utcnow().isoformat()
         }

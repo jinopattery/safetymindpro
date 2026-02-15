@@ -41,7 +41,7 @@ class FinancialMapper(DomainMapper):
         }
         """
         graph = UniversalGraph()
-        graph.metadata = {
+        graph.graph_metadata = {
             'domain': 'financial',
             'created_at': datetime.utcnow().isoformat()
         }
