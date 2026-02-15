@@ -41,7 +41,7 @@ class TradingMapper(DomainMapper):
         }
         """
         graph = UniversalGraph()
-        graph.metadata = {
+        graph.graph_metadata = {
             'domain': 'trading',
             'created_at': datetime.utcnow().isoformat()
         }

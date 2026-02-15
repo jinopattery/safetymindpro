@@ -385,8 +385,9 @@ class UniversalGraph:
         self.failure_branches: List[FailurePropagationBranch] = []
         self.graph: nx.MultiDiGraph = nx.MultiDiGraph()
         
-        # Metadata
-        self.metadata: Dict[str, Any] = {}
+        # Additional metadata about the graph (domain info, timestamps, etc.)
+        # Renamed from 'metadata' to avoid SQLAlchemy reserved attribute conflict
+        self.graph_metadata: Dict[str, Any] = {}
     
     def add_form_element(self, element: FormElement) -> None:
         """
@@ -512,7 +513,7 @@ class UniversalGraph:
             'failure_modes': {fid: fm.to_dict() for fid, fm in self.failure_modes.items()},
             'function_branches': [fb.to_dict() for fb in self.function_branches],
             'failure_branches': [fb.to_dict() for fb in self.failure_branches],
-            'metadata': self.metadata
+            'graph_metadata': self.graph_metadata
         }
     
     @classmethod
@@ -527,7 +528,7 @@ class UniversalGraph:
             UniversalGraph instance
         """
         graph = cls()
-        graph.metadata = data.get('metadata', {})
+        graph.graph_metadata = data.get('graph_metadata', data.get('metadata', {}))  # Support old 'metadata' key for backward compatibility
         
         # Restore form elements
         for form_data in data.get('form_elements', {}).values():

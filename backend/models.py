@@ -74,6 +74,9 @@ class AnalysisResult(Base):
 class UniversalGraphData(Base):
     """
     Storage for universal graph data using Form-Function-Failure architecture
+    
+    NOTE: Avoid using 'metadata' as a column name in SQLAlchemy models.
+    'metadata' is a reserved attribute in SQLAlchemy's declarative base.
     """
     __tablename__ = "universal_graphs"
     
@@ -87,7 +90,7 @@ class UniversalGraphData(Base):
     failure_modes = Column(JSON)  # Dict of FailureMode instances
     function_branches = Column(JSON)  # List of FunctionBranch instances
     failure_branches = Column(JSON)  # List of FailurePropagationBranch instances
-    metadata = Column(JSON)  # Additional metadata
+    graph_metadata = Column(JSON)  # Additional metadata (renamed from 'metadata' to avoid SQLAlchemy reserved attribute)
     
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

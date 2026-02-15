@@ -47,7 +47,7 @@ class AutomotiveMapper(DomainMapper):
             UniversalGraph instance
         """
         graph = UniversalGraph()
-        graph.metadata = {
+        graph.graph_metadata = {
             'domain': 'automotive',
             'created_at': datetime.utcnow().isoformat()
         }
