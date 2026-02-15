@@ -1,5 +1,12 @@
 """
 Automotive FMEA domain models
+
+This module defines the data models for automotive FMEA (Failure Mode and Effects Analysis).
+
+Import Management:
+- Imports calculate_rpn from utils.py (not calculations.py) to avoid circular imports
+- The utils module acts as a shared utility layer between models and calculations
+- This allows FailureMode.calculate_rpn() to use the utility without circular dependency
 """
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field

@@ -1,5 +1,12 @@
 """
 FMEA calculations and analysis functions
+
+This module provides calculation and analysis functionality for FMEA data.
+
+Import Management:
+- Imports models (FMEAAnalysis, FailureMode, etc.) for type annotations and analysis
+- Imports calculate_rpn from utils.py (not models.py) to avoid circular imports
+- The utils module acts as a shared dependency layer, breaking the circular reference
 """
 from typing import List, Dict, Any, Tuple
 

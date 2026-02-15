@@ -2,6 +2,17 @@
 Automotive Domain Adapter
 
 Implements the DomainAdapter interface for automotive safety analysis (FMEA, FTA).
+
+This adapter provides:
+- Node types: component, failure_mode, fault_event, system
+- Edge types: function_flow, failure_propagation, component_hierarchy, fault_tree_gate
+- Analysis algorithms: FMEA risk analysis, failure propagation, critical components
+- Validation rules for automotive safety data
+- Export formats: JSON, Excel, PDF, GraphML
+
+Import Management:
+- Imports from utils.py for shared utilities (calculate_rpn) to avoid circular imports
+- The adapter is registered with the domain registry via the register() class method
 """
 
 from typing import Dict, List, Any, Optional
