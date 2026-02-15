@@ -1,3 +1,1 @@
-"""
-Automotive FMEA/FTA domain module
-"""
+from .adapter import AutomotiveDomain
