@@ -2,18 +2,18 @@
 FMEA calculations and analysis functions
 """
 from typing import List, Dict, Any, Tuple
+
+# Import models for type annotations and analysis
 from backend.domains.automotive.models import (
     FMEAAnalysis,
     FailureMode,
     Component,
     FailureNet
 )
+# Import shared utilities to avoid circular imports
+from backend.domains.automotive.utils import calculate_rpn
 from backend.core.graph import Graph, NodeData, EdgeData
 from backend.core.algorithms import GraphAlgorithms
-
-def calculate_rpn(severity: int, occurrence: int, detection: int) -> int:
-    """Calculate Risk Priority Number from raw values."""
-    return severity * occurrence * detection
 
 class FMEACalculator:
     """FMEA calculation engine"""

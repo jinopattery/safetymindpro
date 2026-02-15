@@ -5,7 +5,8 @@ from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field
 from enum import Enum
 
-from backend.domains.automotive.calculations import calculate_rpn
+# Import shared utility to avoid circular import with calculations module
+from backend.domains.automotive.utils import calculate_rpn
 
 class FailureSeverity(str, Enum):
     """Failure severity ratings"""
