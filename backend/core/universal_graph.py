@@ -385,7 +385,8 @@ class UniversalGraph:
         self.failure_branches: List[FailurePropagationBranch] = []
         self.graph: nx.MultiDiGraph = nx.MultiDiGraph()
         
-        # Graph metadata (renamed from 'metadata' to avoid SQLAlchemy reserved attribute)
+        # Additional metadata about the graph (domain info, timestamps, etc.)
+        # Renamed from 'metadata' to avoid SQLAlchemy reserved attribute conflict
         self.graph_metadata: Dict[str, Any] = {}
     
     def add_form_element(self, element: FormElement) -> None:

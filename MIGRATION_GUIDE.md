@@ -83,11 +83,59 @@ If you have Alembic configured in your project:
 ```bash
 # Generate migration
 alembic revision -m "rename_metadata_to_graph_metadata"
+```
 
-# Edit the generated migration file to include:
-# op.alter_column('universal_graphs', 'metadata', new_column_name='graph_metadata')
+Edit the generated migration file to include:
 
-# Apply migration
+**For SQLite (requires table recreation):**
+```python
+def upgrade():
+    # SQLite doesn't support column rename, so we recreate the table
+    op.execute("""
+        CREATE TABLE universal_graphs_new (
+            id INTEGER PRIMARY KEY,
+            graph_id INTEGER,
+            domain VARCHAR NOT NULL,
+            form_elements JSON,
+            functions JSON,
+            failure_modes JSON,
+            function_branches JSON,
+            failure_branches JSON,
+            graph_metadata JSON,
+            created_at DATETIME,
+            updated_at DATETIME,
+            FOREIGN KEY(graph_id) REFERENCES graphs (id)
+        )
+    """)
+    
+    op.execute("""
+        INSERT INTO universal_graphs_new
+        SELECT id, graph_id, domain, form_elements, functions, failure_modes,
+               function_branches, failure_branches, metadata, created_at, updated_at
+        FROM universal_graphs
+    """)
+    
+    op.execute("DROP TABLE universal_graphs")
+    op.execute("ALTER TABLE universal_graphs_new RENAME TO universal_graphs")
+
+def downgrade():
+    # Reverse the migration
+    pass
+```
+
+**For PostgreSQL/MySQL (direct column rename):**
+```python
+def upgrade():
+    with op.batch_alter_table('universal_graphs') as batch_op:
+        batch_op.alter_column('metadata', new_column_name='graph_metadata')
+
+def downgrade():
+    with op.batch_alter_table('universal_graphs') as batch_op:
+        batch_op.alter_column('graph_metadata', new_column_name='metadata')
+```
+
+Then apply the migration:
+```bash
 alembic upgrade head
 ```
 
