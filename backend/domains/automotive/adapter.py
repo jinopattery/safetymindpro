@@ -2,6 +2,17 @@
 Automotive Domain Adapter
 
 Implements the DomainAdapter interface for automotive safety analysis (FMEA, FTA).
+
+This adapter provides:
+- Node types: component, failure_mode, fault_event, system
+- Edge types: function_flow, failure_propagation, component_hierarchy, fault_tree_gate
+- Analysis algorithms: FMEA risk analysis, failure propagation, critical components
+- Validation rules for automotive safety data
+- Export formats: JSON, Excel, PDF, GraphML
+
+Import Management:
+- Imports from utils.py for shared utilities (calculate_rpn) to avoid circular imports
+- The adapter is registered with the domain registry via the register() class method
 """
 
 from typing import Dict, List, Any, Optional
@@ -11,7 +22,8 @@ from backend.domains.base import (
 )
 from backend.core.graph import NodeData, EdgeData, Graph
 from backend.domains.automotive.models import FailureMode, Component, FunctionNet, FailureNet
-from backend.domains.automotive.calculations import calculate_rpn
+# Import shared utilities to avoid circular imports
+from backend.domains.automotive.utils import calculate_rpn
 import networkx as nx
 
 
@@ -420,3 +432,14 @@ class AutomotiveDomain(DomainAdapter):
     
     def get_export_formats(self) -> List[str]:
         return ['json', 'excel', 'pdf', 'graphml']
+    
+    @classmethod
+    def register(cls):
+        """
+        Register the automotive domain with the global domain registry.
+        
+        This method instantiates the domain adapter and registers it with
+        the central domain registry for discovery and use.
+        """
+        from backend.domains.registry import register_domain
+        register_domain(cls())

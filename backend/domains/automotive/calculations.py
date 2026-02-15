@@ -1,19 +1,26 @@
 """
 FMEA calculations and analysis functions
+
+This module provides calculation and analysis functionality for FMEA data.
+
+Import Management:
+- Imports models (FMEAAnalysis, FailureMode, etc.) for type annotations and analysis
+- Imports calculate_rpn from utils.py (not models.py) to avoid circular imports
+- The utils module acts as a shared dependency layer, breaking the circular reference
 """
 from typing import List, Dict, Any, Tuple
+
+# Import models for type annotations and analysis
 from backend.domains.automotive.models import (
     FMEAAnalysis,
     FailureMode,
     Component,
     FailureNet
 )
+# Import shared utilities to avoid circular imports
+from backend.domains.automotive.utils import calculate_rpn
 from backend.core.graph import Graph, NodeData, EdgeData
 from backend.core.algorithms import GraphAlgorithms
-
-def calculate_rpn(severity: int, occurrence: int, detection: int) -> int:
-    """Calculate Risk Priority Number from raw values."""
-    return severity * occurrence * detection
 
 class FMEACalculator:
     """FMEA calculation engine"""
