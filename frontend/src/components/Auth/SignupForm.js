@@ -59,7 +59,7 @@ function SignupForm({ onSignup }) {
       if (result.error) {
         setError(result.error);
       } else {
-        setError('Signup failed: Unknown error.');
+        setError('Signup failed. Please try again or contact support if the problem persists.');
       }
       setLoading(false);
     }

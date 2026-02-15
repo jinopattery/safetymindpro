@@ -19,11 +19,12 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 # Password hashing context with bcrypt
-# Note: bcrypt >=4.0.0 compatibility - passlib needs special config to avoid __about__ deprecation
+# Note: bcrypt >=4.0.0 compatibility - explicitly set default rounds
+# 12 rounds is bcrypt's default, providing good balance between security and performance
 pwd_context = CryptContext(
     schemes=["bcrypt"],
     deprecated="auto",
-    bcrypt__default_rounds=12,  # Explicit bcrypt configuration
+    bcrypt__default_rounds=12,
 )
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
@@ -96,9 +97,16 @@ async def signup(user: UserCreate, db: Session = Depends(get_db)):
     Create a new user account with validation.
     
     Password constraints:
-    - Maximum 72 characters (bcrypt limitation)
     - Minimum 6 characters (basic security requirement)
+    - Maximum 72 characters (bcrypt limitation)
     """
+    # Validate minimum password length first (more common validation failure)
+    if len(user.password) < 6:
+        raise HTTPException(
+            status_code=400,
+            detail="Password must be at least 6 characters long."
+        )
+    
     # Validate password length before processing
     # Bcrypt has a maximum password length of 72 bytes
     # Reject passwords exceeding this limit to avoid truncation issues
@@ -106,13 +114,6 @@ async def signup(user: UserCreate, db: Session = Depends(get_db)):
         raise HTTPException(
             status_code=400,
             detail="Password cannot be longer than 72 characters. Please choose a shorter password."
-        )
-    
-    # Basic minimum length check
-    if len(user.password) < 6:
-        raise HTTPException(
-            status_code=400,
-            detail="Password must be at least 6 characters long."
         )
     
     # Check if user exists
