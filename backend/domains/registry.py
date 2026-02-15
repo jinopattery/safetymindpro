@@ -1,12 +1,13 @@
 """
 Domain Registry System
 
-Manages registration and discovery of domain adapters.
+Manages registration and discovery of domain adapters and mappers.
 Provides a central registry for all available domains in the system.
 """
 
-from typing import Dict, List, Optional, Type
+from typing import Dict, List, Optional, Type, Union
 from backend.domains.base import DomainAdapter, StylingConfig
+from backend.core.domain_mapper import DomainMapper
 import logging
 
 logger = logging.getLogger(__name__)
@@ -14,13 +15,15 @@ logger = logging.getLogger(__name__)
 
 class DomainRegistry:
     """
-    Singleton registry for domain adapters.
+    Singleton registry for domain adapters and mappers.
     
     Manages all registered domains and provides lookup functionality.
+    Supports both legacy adapters and new universal mappers.
     """
     
     _instance: Optional['DomainRegistry'] = None
     _domains: Dict[str, DomainAdapter] = {}
+    _mappers: Dict[str, DomainMapper] = {}
     
     def __new__(cls):
         if cls._instance is None:
@@ -29,7 +32,7 @@ class DomainRegistry:
     
     def register(self, adapter: DomainAdapter) -> None:
         """
-        Register a domain adapter
+        Register a domain adapter (legacy)
         
         Args:
             adapter: Domain adapter instance
@@ -40,7 +43,43 @@ class DomainRegistry:
             logger.warning(f"Domain '{domain_name}' already registered. Overwriting.")
         
         self._domains[domain_name] = adapter
-        logger.info(f"Registered domain: {domain_name} ({adapter.domain_display_name})")
+        logger.info(f"Registered domain adapter: {domain_name} ({adapter.domain_display_name})")
+    
+    def register_mapper(self, mapper: DomainMapper) -> None:
+        """
+        Register a domain mapper (new universal architecture)
+        
+        Args:
+            mapper: Domain mapper instance
+        """
+        domain_name = mapper.domain_name
+        
+        if domain_name in self._mappers:
+            logger.warning(f"Mapper '{domain_name}' already registered. Overwriting.")
+        
+        self._mappers[domain_name] = mapper
+        logger.info(f"Registered domain mapper: {domain_name}")
+    
+    def get_mapper(self, domain_name: str) -> Optional[DomainMapper]:
+        """
+        Get a domain mapper by name
+        
+        Args:
+            domain_name: Name of domain
+            
+        Returns:
+            Domain mapper or None if not found
+        """
+        return self._mappers.get(domain_name)
+    
+    def list_mappers(self) -> List[str]:
+        """
+        List all registered mapper domain names
+        
+        Returns:
+            List of domain names with mappers
+        """
+        return list(self._mappers.keys())
     
     def unregister(self, domain_name: str) -> bool:
         """
@@ -183,12 +222,22 @@ registry = DomainRegistry()
 
 def register_domain(adapter: DomainAdapter) -> None:
     """
-    Convenience function to register a domain adapter
+    Convenience function to register a domain adapter (legacy)
     
     Args:
         adapter: Domain adapter instance
     """
     registry.register(adapter)
+
+
+def register_mapper(mapper: DomainMapper) -> None:
+    """
+    Convenience function to register a domain mapper (new)
+    
+    Args:
+        mapper: Domain mapper instance
+    """
+    registry.register_mapper(mapper)
 
 
 def get_domain(domain_name: str) -> Optional[DomainAdapter]:
@@ -202,6 +251,19 @@ def get_domain(domain_name: str) -> Optional[DomainAdapter]:
         Domain adapter or None
     """
     return registry.get(domain_name)
+
+
+def get_mapper(domain_name: str) -> Optional[DomainMapper]:
+    """
+    Convenience function to get a domain mapper
+    
+    Args:
+        domain_name: Name of domain
+        
+    Returns:
+        Domain mapper or None
+    """
+    return registry.get_mapper(domain_name)
 
 
 def list_domains() -> List[str]:

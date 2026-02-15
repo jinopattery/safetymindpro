@@ -69,3 +69,25 @@ class AnalysisResult(Base):
     
     # Relationships
     graph = relationship("Graph", back_populates="analysis_results")
+
+
+class UniversalGraphData(Base):
+    """
+    Storage for universal graph data using Form-Function-Failure architecture
+    """
+    __tablename__ = "universal_graphs"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    graph_id = Column(Integer, ForeignKey("graphs.id"), nullable=True)
+    domain = Column(String, nullable=False)
+    
+    # Form-Function-Failure data as JSON
+    form_elements = Column(JSON)  # Dict of FormElement instances
+    functions = Column(JSON)  # Dict of Function instances
+    failure_modes = Column(JSON)  # Dict of FailureMode instances
+    function_branches = Column(JSON)  # List of FunctionBranch instances
+    failure_branches = Column(JSON)  # List of FailurePropagationBranch instances
+    metadata = Column(JSON)  # Additional metadata
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

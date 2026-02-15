@@ -2,6 +2,7 @@
 Domain API Router
 
 Provides REST API endpoints for domain management and operations.
+Supports both v1 (legacy adapters) and v2 (universal mappers) architectures.
 """
 
 from fastapi import APIRouter, HTTPException, Query
@@ -10,6 +11,13 @@ from pydantic import BaseModel
 
 from backend.domains.registry import registry
 from backend.core.graph import Graph, NodeData, EdgeData
+from backend.core.universal_graph import UniversalGraph
+from backend.algorithms import (
+    structural_analysis,
+    functional_analysis,
+    risk_analysis,
+    timeseries_analysis
+)
 
 router = APIRouter(prefix="/api/v1/domains", tags=["domains"])
 
@@ -288,3 +296,222 @@ async def enrich_node(domain_name: str, node: Dict[str, Any]):
     enriched = adapter.enrich_node(node_data)
     
     return enriched.dict()
+
+
+# ============================================================================
+# V2 API - Universal Graph Architecture
+# ============================================================================
+
+# Create separate router for v2 API
+router_v2 = APIRouter(prefix="/api/v2/domains", tags=["domains-v2"])
+
+
+class UniversalAnalysisRequest(BaseModel):
+    """Request to run universal algorithm"""
+    domain_data: Dict[str, Any]
+    algorithm: str  # structural_analysis, risk_analysis, functional_analysis, timeseries_analysis
+    params: Optional[Dict[str, Any]] = None
+
+
+class UniversalAnalysisResponse(BaseModel):
+    """Response from universal algorithm"""
+    success: bool
+    results: Dict[str, Any]
+    error: Optional[str] = None
+
+
+@router_v2.get("/mappers")
+async def list_mappers():
+    """
+    List all registered domain mappers (v2 architecture)
+    
+    Returns:
+        List of domain names with mappers
+    """
+    return {
+        "mappers": registry.list_mappers(),
+        "architecture_version": "v2"
+    }
+
+
+@router_v2.post("/{domain_name}/analyze", response_model=UniversalAnalysisResponse)
+async def analyze_universal_graph(
+    domain_name: str,
+    request: UniversalAnalysisRequest
+):
+    """
+    Universal analysis endpoint (v2 architecture)
+    
+    Flow:
+    1. Get domain mapper
+    2. Map domain data to UniversalGraph
+    3. Run universal algorithm
+    4. Format results back to domain format
+    
+    Args:
+        domain_name: Name of the domain
+        request: Analysis request with domain data and algorithm
+        
+    Returns:
+        Formatted analysis results
+        
+    Raises:
+        HTTPException: If domain mapper not found or analysis fails
+    """
+    # Get mapper
+    mapper = registry.get_mapper(domain_name)
+    if not mapper:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Domain mapper '{domain_name}' not found. Available mappers: {registry.list_mappers()}"
+        )
+    
+    try:
+        # Convert to universal graph
+        universal_graph = mapper.map_to_universal_graph(request.domain_data)
+        
+        # Run universal algorithm
+        algorithm_results = {}
+        
+        if request.algorithm == 'structural_analysis':
+            algorithm_results = structural_analysis.analyze_structure(universal_graph)
+            algorithm_results['analysis_type'] = 'structural_analysis'
+            
+        elif request.algorithm == 'risk_analysis':
+            algorithm_results = risk_analysis.analyze_failure_propagation(universal_graph)
+            algorithm_results['analysis_type'] = 'risk_analysis'
+            
+        elif request.algorithm == 'functional_analysis':
+            algorithm_results = functional_analysis.analyze_function_tree(universal_graph)
+            algorithm_results['analysis_type'] = 'functional_analysis'
+            
+        elif request.algorithm == 'timeseries_analysis':
+            algorithm_results = timeseries_analysis.analyze_timeseries(universal_graph.form_elements)
+            algorithm_results['analysis_type'] = 'timeseries_analysis'
+            
+        elif request.algorithm == 'criticality':
+            criticality_scores = structural_analysis.compute_criticality(universal_graph)
+            algorithm_results = {
+                'criticality_scores': criticality_scores,
+                'analysis_type': 'criticality'
+            }
+            
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unknown algorithm '{request.algorithm}'. Available: structural_analysis, risk_analysis, functional_analysis, timeseries_analysis, criticality"
+            )
+        
+        # Format results for domain
+        formatted_results = mapper.format_results(algorithm_results, universal_graph)
+        
+        return {
+            "success": True,
+            "results": formatted_results,
+            "error": None
+        }
+    
+    except Exception as e:
+        return {
+            "success": False,
+            "results": {},
+            "error": str(e)
+        }
+
+
+@router_v2.post("/{domain_name}/validate")
+async def validate_domain_data(domain_name: str, domain_data: Dict[str, Any]):
+    """
+    Validate domain-specific data
+    
+    Args:
+        domain_name: Name of the domain
+        domain_data: Domain data to validate
+        
+    Returns:
+        Validation result
+        
+    Raises:
+        HTTPException: If domain mapper not found
+    """
+    mapper = registry.get_mapper(domain_name)
+    if not mapper:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Domain mapper '{domain_name}' not found"
+        )
+    
+    is_valid = mapper.validate_domain_data(domain_data)
+    
+    return {
+        "valid": is_valid,
+        "domain": domain_name,
+        "architecture_version": "v2"
+    }
+
+
+@router_v2.get("/{domain_name}/metadata")
+async def get_mapper_metadata(domain_name: str):
+    """
+    Get metadata for a domain mapper
+    
+    Args:
+        domain_name: Name of the domain
+        
+    Returns:
+        Domain metadata
+        
+    Raises:
+        HTTPException: If domain mapper not found
+    """
+    mapper = registry.get_mapper(domain_name)
+    if not mapper:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Domain mapper '{domain_name}' not found"
+        )
+    
+    return mapper.get_metadata()
+
+
+@router_v2.post("/{domain_name}/convert-to-universal")
+async def convert_to_universal(domain_name: str, domain_data: Dict[str, Any]):
+    """
+    Convert domain-specific data to universal graph format
+    
+    Args:
+        domain_name: Name of the domain
+        domain_data: Domain-specific data
+        
+    Returns:
+        Universal graph representation
+        
+    Raises:
+        HTTPException: If domain mapper not found or conversion fails
+    """
+    mapper = registry.get_mapper(domain_name)
+    if not mapper:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Domain mapper '{domain_name}' not found"
+        )
+    
+    try:
+        universal_graph = mapper.map_to_universal_graph(domain_data)
+        
+        return {
+            "success": True,
+            "universal_graph": universal_graph.to_dict(),
+            "metadata": {
+                "domain": domain_name,
+                "form_elements_count": len(universal_graph.form_elements),
+                "functions_count": len(universal_graph.functions),
+                "failure_modes_count": len(universal_graph.failure_modes)
+            }
+        }
+    
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Conversion failed: {str(e)}"
+        )

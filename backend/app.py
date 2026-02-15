@@ -12,6 +12,7 @@ from backend.database import engine, Base
 
 # Import only working routers
 from backend.routers import domains, auth
+from backend.routers.domains import router_v2  # Import v2 router
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -50,6 +51,7 @@ app.add_middleware(
 # Include routers
 app.include_router(auth.router, prefix="/api/v1", tags=["Authentication"])
 app.include_router(domains.router, tags=["Domains"])
+app.include_router(router_v2, tags=["Domains V2 - Universal Architecture"])
 
 # Root endpoint
 @app.get("/")
@@ -62,7 +64,8 @@ async def root():
         "endpoints": {
             "docs": "/docs",
             "health": "/health",
-            "domains": "/api/v1/domains/",
+            "domains_v1": "/api/v1/domains/",
+            "domains_v2": "/api/v2/domains/",
             "login": "/api/v1/auth/login",
             "signup": "/api/v1/auth/signup"
         }
@@ -85,7 +88,8 @@ async def startup_event():
     logger.info("=" * 70)
     logger.info("✅ API Documentation: http://127.0.0.1:8000/docs")
     logger.info("✅ Health Check: http://127.0.0.1:8000/health")
-    logger.info("✅ Domains API: http://127.0.0.1:8000/api/v1/domains/")
+    logger.info("✅ Domains API v1: http://127.0.0.1:8000/api/v1/domains/")
+    logger.info("✅ Domains API v2 (Universal): http://127.0.0.1:8000/api/v2/domains/")
     logger.info("=" * 70)
 
 # Error handlers
