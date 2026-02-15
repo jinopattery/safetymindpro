@@ -18,7 +18,14 @@ SECRET_KEY = "your-secret-key-change-in-production"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Password hashing context with bcrypt
+# Note: bcrypt >=4.0.0 compatibility - explicitly set default rounds
+# 12 rounds is bcrypt's default, providing good balance between security and performance
+pwd_context = CryptContext(
+    schemes=["bcrypt"],
+    deprecated="auto",
+    bcrypt__default_rounds=12,
+)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
 router = APIRouter(prefix="/auth")
@@ -45,9 +52,16 @@ class Token(BaseModel):
 
 # Helper functions
 def verify_password(plain_password, hashed_password):
+    """Verify a plain text password against a hashed password."""
     return pwd_context.verify(plain_password, hashed_password)
 
 def get_password_hash(password):
+    """
+    Hash a password using bcrypt.
+    
+    Note: Password must be validated to be <= 72 characters before calling this function.
+    Bcrypt will truncate passwords longer than 72 bytes, which can lead to security issues.
+    """
     return pwd_context.hash(password)
 
 def create_access_token(data: dict):
@@ -79,6 +93,29 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
 # Routes
 @router.post("/signup", response_model=Token)
 async def signup(user: UserCreate, db: Session = Depends(get_db)):
+    """
+    Create a new user account with validation.
+    
+    Password constraints:
+    - Minimum 6 characters (basic security requirement)
+    - Maximum 72 characters (bcrypt limitation)
+    """
+    # Validate minimum password length first (more common validation failure)
+    if len(user.password) < 6:
+        raise HTTPException(
+            status_code=400,
+            detail="Password must be at least 6 characters long."
+        )
+    
+    # Validate password length before processing
+    # Bcrypt has a maximum password length of 72 bytes
+    # Reject passwords exceeding this limit to avoid truncation issues
+    if len(user.password) > 72:
+        raise HTTPException(
+            status_code=400,
+            detail="Password cannot be longer than 72 characters. Please choose a shorter password."
+        )
+    
     # Check if user exists
     db_user = db.query(User).filter(
         (User.email == user.email) | (User.username == user.username)
@@ -86,7 +123,8 @@ async def signup(user: UserCreate, db: Session = Depends(get_db)):
     if db_user:
         raise HTTPException(status_code=400, detail="Email or username already registered")
     
-    # Create new user
+    # Create new user with hashed password
+    # Password is safe to hash since it passed length validation
     hashed_password = get_password_hash(user.password)
     db_user = User(
         email=user.email,
@@ -100,7 +138,7 @@ async def signup(user: UserCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(db_user)
     
-    # Create token
+    # Create access token for immediate login
     access_token = create_access_token(data={"sub": db_user.username})
     
     return {

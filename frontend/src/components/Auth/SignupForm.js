@@ -26,15 +26,23 @@ function SignupForm({ onSignup }) {
     setLoading(true);
     setError('');
 
-    // Validate
+    // Validate passwords match
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
       setLoading(false);
       return;
     }
 
+    // Validate minimum password length
     if (formData.password.length < 6) {
       setError('Password must be at least 6 characters');
+      setLoading(false);
+      return;
+    }
+
+    // Validate maximum password length (bcrypt limitation)
+    if (formData.password.length > 72) {
+      setError('Password cannot be longer than 72 characters');
       setLoading(false);
       return;
     }
@@ -47,7 +55,12 @@ function SignupForm({ onSignup }) {
     });
     
     if (!result.success) {
-      setError(result.error);
+      // Display detailed error from backend if available
+      if (result.error) {
+        setError(result.error);
+      } else {
+        setError('Signup failed. Please try again or contact support if the problem persists.');
+      }
       setLoading(false);
     }
   };
@@ -109,7 +122,7 @@ function SignupForm({ onSignup }) {
           </div>
 
           <div className="form-group">
-            <label htmlFor="password">Password *</label>
+            <label htmlFor="password">Password * (6-72 characters)</label>
             <input
               id="password"
               name="password"
@@ -117,6 +130,7 @@ function SignupForm({ onSignup }) {
               value={formData.password}
               onChange={handleChange}
               required
+              maxLength={72}
               placeholder="At least 6 characters"
             />
           </div>
@@ -130,6 +144,7 @@ function SignupForm({ onSignup }) {
               value={formData.confirmPassword}
               onChange={handleChange}
               required
+              maxLength={72}
               placeholder="Re-enter password"
             />
           </div>
