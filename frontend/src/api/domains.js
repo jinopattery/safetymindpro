@@ -63,5 +63,25 @@ export const domainsAPI = {
   validateEdge: async (domain, edgeData) => {
     const response = await axios.post(`${API_BASE}/domains/${domain}/validate-edge`, edgeData);
     return response.data;
+  },
+
+  // Save graph
+  saveGraph: async (name, description, graphData, domain) => {
+    const response = await axios.post(`${API_BASE}/domains/save-graph`, {
+      name,
+      description,
+      graph_data: graphData,
+      domain
+    });
+    return response.data;
+  },
+
+  // Export graph
+  exportGraph: async (graphData, format = 'json') => {
+    const response = await axios.post(`${API_BASE}/domains/export-graph`, {
+      graph_data: graphData,
+      format
+    });
+    return response.data;
   }
 };

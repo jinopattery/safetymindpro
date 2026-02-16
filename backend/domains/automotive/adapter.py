@@ -191,22 +191,50 @@ class AutomotiveDomain(DomainAdapter):
     
     def get_node_types(self) -> List[DomainNodeType]:
         return [
+            # Form Layer Nodes (Physical/Logical Structure)
             DomainNodeType(
-                name="component",
-                display_name="Component",
+                name="form_component",
+                display_name="Component (Form)",
                 icon="🔧",
-                description="Automotive component or subsystem",
+                description="Automotive component or subsystem (Form Element)",
                 default_attributes={
-                    "functions": [],
-                    "parent_component": None
+                    "layer": "form",
+                    "characteristics": {},  # Static properties: part_number, material, supplier
+                    "properties": {}  # Time-series: temperature, vibration, wear
                 }
             ),
+            DomainNodeType(
+                name="form_system",
+                display_name="System (Form)",
+                icon="🚗",
+                description="Top-level automotive system (Form Element)",
+                default_attributes={
+                    "layer": "form",
+                    "characteristics": {},
+                    "subsystems": []
+                }
+            ),
+            # Function Layer Nodes (Behavioral Structure)
+            DomainNodeType(
+                name="function",
+                display_name="Function",
+                icon="⚙️",
+                description="System function (e.g., Brake Vehicle, Decelerate)",
+                default_attributes={
+                    "layer": "function",
+                    "inputs": [],
+                    "outputs": [],
+                    "performance_metrics": {}
+                }
+            ),
+            # Failure Layer Nodes (Risk Structure)
             DomainNodeType(
                 name="failure_mode",
                 display_name="Failure Mode",
                 icon="⚠️",
-                description="Potential failure mode of a component",
+                description="Potential failure mode (Failure Layer)",
                 default_attributes={
+                    "layer": "failure",
                     "severity": 1,
                     "occurrence": 1,
                     "detection": 1,
@@ -220,52 +248,70 @@ class AutomotiveDomain(DomainAdapter):
                 name="fault_event",
                 display_name="Fault Event",
                 icon="🔴",
-                description="Event in fault tree analysis",
+                description="Event in fault tree analysis (Failure Layer)",
                 default_attributes={
+                    "layer": "failure",
                     "probability": 0.0,
                     "gate_type": None  # AND, OR, etc.
-                }
-            ),
-            DomainNodeType(
-                name="system",
-                display_name="System",
-                icon="🚗",
-                description="Top-level automotive system",
-                default_attributes={
-                    "subsystems": []
                 }
             )
         ]
     
     def get_edge_types(self) -> List[DomainEdgeType]:
         return [
+            # Form Layer Edges
+            DomainEdgeType(
+                name="form_hierarchy",
+                display_name="Form Hierarchy",
+                description="Parent-child relationship between form elements",
+                directed=True,
+                default_attributes={
+                    "relationship_type": "contains",
+                    "relation": "form_hierarchy"
+                }
+            ),
+            # Function Layer Edges
             DomainEdgeType(
                 name="function_flow",
                 display_name="Function Flow",
-                description="Functional relationship between components",
+                description="Function dependency/flow (sequential, parallel, conditional)",
                 directed=True,
                 default_attributes={
-                    "function_description": ""
+                    "connection_type": "sequential",  # sequential, parallel, conditional
+                    "reliability": 1.0,
+                    "latency": 0.0,
+                    "relation": "function_flow"
                 }
             ),
             DomainEdgeType(
+                name="performs_function",
+                display_name="Performs Function",
+                description="Form element performs a function",
+                directed=True,
+                default_attributes={
+                    "relation": "performs"
+                }
+            ),
+            # Failure Layer Edges
+            DomainEdgeType(
                 name="failure_propagation",
                 display_name="Failure Propagation",
-                description="How a failure propagates from one component to another",
+                description="How a failure propagates through the system",
                 directed=True,
                 default_attributes={
                     "propagation_probability": 1.0,
                     "propagation_mechanism": "",
-                    "time_to_propagate": None
+                    "time_to_propagate": None,
+                    "relation": "propagates_to"
                 }
             ),
             DomainEdgeType(
-                name="component_hierarchy",
-                display_name="Component Hierarchy",
-                description="Parent-child relationship between components",
+                name="has_failure",
+                display_name="Has Failure Mode",
+                description="Form/Function has a failure mode",
                 directed=True,
                 default_attributes={
-                    "relationship_type": "contains"
+                    "relation": "has_failure"
                 }
             ),
             DomainEdgeType(
@@ -274,7 +320,8 @@ class AutomotiveDomain(DomainAdapter):
                 description="Logical gate connection in fault tree",
                 directed=True,
                 default_attributes={
-                    "gate_type": "AND"  # AND, OR, etc.
+                    "gate_type": "AND",  # AND, OR, etc.
+                    "relation": "fault_gate"
                 }
             )
         ]
@@ -282,7 +329,8 @@ class AutomotiveDomain(DomainAdapter):
     def get_styling_config(self) -> StylingConfig:
         return StylingConfig(
             node_styles={
-                "component": {
+                # Form Layer Styles
+                "form_component": {
                     "shape": "rectangle",
                     "backgroundColor": "#3498db",
                     "color": "#ffffff",
@@ -292,6 +340,28 @@ class AutomotiveDomain(DomainAdapter):
                     "padding": 12,
                     "borderRadius": 5
                 },
+                "form_system": {
+                    "shape": "rectangle",
+                    "backgroundColor": "#2ecc71",
+                    "color": "#ffffff",
+                    "borderColor": "#27ae60",
+                    "borderWidth": 3,
+                    "fontSize": 16,
+                    "padding": 15,
+                    "borderRadius": 8
+                },
+                # Function Layer Styles
+                "function": {
+                    "shape": "hexagon",
+                    "backgroundColor": "#9b59b6",
+                    "color": "#ffffff",
+                    "borderColor": "#8e44ad",
+                    "borderWidth": 2,
+                    "fontSize": 13,
+                    "padding": 11,
+                    "borderRadius": 4
+                },
+                # Failure Layer Styles
                 "failure_mode": {
                     "shape": "diamond",
                     "backgroundColor": "#e74c3c",
@@ -308,26 +378,32 @@ class AutomotiveDomain(DomainAdapter):
                     "borderColor": "#d35400",
                     "borderWidth": 2,
                     "fontSize": 12
-                },
-                "system": {
-                    "shape": "rectangle",
-                    "backgroundColor": "#2ecc71",
-                    "color": "#ffffff",
-                    "borderColor": "#27ae60",
-                    "borderWidth": 3,
-                    "fontSize": 16,
-                    "padding": 15,
-                    "borderRadius": 8
                 }
             },
             edge_styles={
+                # Form Layer Edges
+                "form_hierarchy": {
+                    "stroke": "#95a5a6",
+                    "strokeWidth": 1,
+                    "type": "straight",
+                    "arrowSize": 6
+                },
+                # Function Layer Edges
                 "function_flow": {
-                    "stroke": "#2ecc71",
+                    "stroke": "#9b59b6",
                     "strokeWidth": 2,
                     "animated": True,
                     "type": "smoothstep",
                     "arrowSize": 8
                 },
+                "performs_function": {
+                    "stroke": "#3498db",
+                    "strokeWidth": 2,
+                    "strokeDasharray": "5,3",
+                    "type": "step",
+                    "arrowSize": 7
+                },
+                # Failure Layer Edges
                 "failure_propagation": {
                     "stroke": "#e74c3c",
                     "strokeWidth": 3,
@@ -336,11 +412,12 @@ class AutomotiveDomain(DomainAdapter):
                     "type": "step",
                     "arrowSize": 10
                 },
-                "component_hierarchy": {
-                    "stroke": "#95a5a6",
-                    "strokeWidth": 1,
+                "has_failure": {
+                    "stroke": "#e67e22",
+                    "strokeWidth": 2,
+                    "strokeDasharray": "3,3",
                     "type": "straight",
-                    "arrowSize": 6
+                    "arrowSize": 7
                 },
                 "fault_tree_gate": {
                     "stroke": "#34495e",
@@ -355,7 +432,10 @@ class AutomotiveDomain(DomainAdapter):
                 "dangerColor": "#e74c3c",
                 "successColor": "#2ecc71",
                 "backgroundColor": "#ecf0f1",
-                "gridColor": "#bdc3c7"
+                "gridColor": "#bdc3c7",
+                "formLayerColor": "#3498db",
+                "functionLayerColor": "#9b59b6",
+                "failureLayerColor": "#e74c3c"
             }
         )
     

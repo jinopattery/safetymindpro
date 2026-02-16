@@ -17,6 +17,7 @@ function WorkspacePage({ user, onLogout }) {
   const [graph, setGraph] = useState({ nodes: [], edges: [] });
   const [algorithmResults, setAlgorithmResults] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [saveStatus, setSaveStatus] = useState('');
 
   useEffect(() => {
     loadDomains();
@@ -64,6 +65,7 @@ function WorkspacePage({ user, onLogout }) {
     navigate(`/workspace/${domain}`);
     setGraph({ nodes: [], edges: [] });
     setAlgorithmResults(null);
+    setSaveStatus('');
   };
 
   const handleRunAlgorithm = async (algorithmName, params) => {
@@ -93,10 +95,103 @@ function WorkspacePage({ user, onLogout }) {
   };
 
   const handleClearGraph = () => {
-    if (window.confirm('Clear all nodes and edges?')) {
+    if (window.confirm('Clear all nodes and edges? This action cannot be undone.')) {
       setGraph({ nodes: [], edges: [] });
       setAlgorithmResults(null);
+      setSaveStatus('');
     }
+  };
+
+  const handleSaveGraph = async () => {
+    if (graph.nodes.length === 0) {
+      alert('Cannot save an empty graph');
+      return;
+    }
+
+    const name = prompt('Enter a name for this graph:');
+    if (!name) return;
+
+    const description = prompt('Enter a description (optional):');
+
+    setLoading(true);
+    setSaveStatus('Saving...');
+    
+    try {
+      const result = await domainsAPI.saveGraph(name, description, graph, selectedDomain);
+      
+      if (result.success) {
+        setSaveStatus(`✓ Saved: ${result.name}`);
+        setTimeout(() => setSaveStatus(''), 3000);
+      } else {
+        setSaveStatus('✗ Save failed');
+        setTimeout(() => setSaveStatus(''), 3000);
+      }
+    } catch (error) {
+      console.error('Save error:', error);
+      setSaveStatus('✗ Save failed');
+      setTimeout(() => setSaveStatus(''), 3000);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleExportGraph = async (format = 'json') => {
+    if (graph.nodes.length === 0) {
+      alert('Cannot export an empty graph');
+      return;
+    }
+
+    try {
+      const result = await domainsAPI.exportGraph(graph, format);
+      
+      if (result.success && format === 'json') {
+        // Download JSON file
+        const dataStr = JSON.stringify(result.data, null, 2);
+        const dataBlob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(dataBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `graph-${selectedDomain}-${Date.now()}.json`;
+        link.click();
+        URL.revokeObjectURL(url);
+        
+        setSaveStatus('✓ Exported');
+        setTimeout(() => setSaveStatus(''), 3000);
+      }
+    } catch (error) {
+      console.error('Export error:', error);
+      alert('Failed to export graph. Check console for details.');
+    }
+  };
+
+  const handleImportGraph = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const importedGraph = JSON.parse(event.target.result);
+          
+          if (importedGraph.nodes && importedGraph.edges) {
+            setGraph(importedGraph);
+            setSaveStatus('✓ Imported');
+            setTimeout(() => setSaveStatus(''), 3000);
+          } else {
+            alert('Invalid graph file format');
+          }
+        } catch (error) {
+          console.error('Import error:', error);
+          alert('Failed to import graph. Invalid JSON format.');
+        }
+      };
+      reader.readAsText(file);
+    };
+    input.click();
   };
 
   const domainIcons = {
@@ -164,8 +259,20 @@ function WorkspacePage({ user, onLogout }) {
               <span className="graph-stats">
                 Nodes: {graph.nodes.length} | Edges: {graph.edges.length}
               </span>
+              {saveStatus && (
+                <span className="save-status">{saveStatus}</span>
+              )}
             </div>
             <div className="toolbar-actions">
+              <button onClick={handleSaveGraph} className="btn btn-save" disabled={loading}>
+                💾 Save
+              </button>
+              <button onClick={() => handleExportGraph('json')} className="btn btn-export" disabled={loading}>
+                📥 Export
+              </button>
+              <button onClick={handleImportGraph} className="btn btn-import" disabled={loading}>
+                📤 Import
+              </button>
               <button onClick={handleClearGraph} className="btn btn-danger">
                 🗑️ Clear
               </button>

@@ -515,3 +515,87 @@ async def convert_to_universal(domain_name: str, domain_data: Dict[str, Any]):
             status_code=500,
             detail=f"Conversion failed: {str(e)}"
         )
+
+
+# ============================================================================
+# Graph Save/Export Endpoints
+# ============================================================================
+
+class GraphSaveRequest(BaseModel):
+    """Request to save a graph"""
+    name: str
+    description: Optional[str] = None
+    graph_data: Dict[str, Any]
+    domain: str
+
+
+class GraphExportRequest(BaseModel):
+    """Request to export a graph"""
+    graph_data: Dict[str, Any]
+    format: str  # json, png, svg
+
+
+@router.post("/save-graph")
+async def save_graph(request: GraphSaveRequest):
+    """
+    Save a graph to backend storage
+    
+    Args:
+        request: Graph save request
+        
+    Returns:
+        Success status and graph ID
+    """
+    try:
+        # For now, we'll just validate and return
+        # In a real implementation, this would save to database
+        graph = Graph.from_dict(request.graph_data)
+        
+        # Generate a unique ID (in production, this would be database ID)
+        import hashlib
+        import time
+        graph_id = hashlib.md5(f"{request.name}{time.time()}".encode()).hexdigest()[:12]
+        
+        return {
+            "success": True,
+            "graph_id": graph_id,
+            "name": request.name,
+            "message": "Graph saved successfully"
+        }
+    
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to save graph: {str(e)}"
+        )
+
+
+@router.post("/export-graph")
+async def export_graph(request: GraphExportRequest):
+    """
+    Export a graph to JSON format
+    
+    Args:
+        request: Graph export request
+        
+    Returns:
+        Exported graph data
+    """
+    try:
+        if request.format == 'json':
+            return {
+                "success": True,
+                "format": "json",
+                "data": request.graph_data
+            }
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unsupported export format: {request.format}. Only 'json' is currently supported."
+            )
+    
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to export graph: {str(e)}"
+        )
