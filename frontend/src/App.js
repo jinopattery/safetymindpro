@@ -4,7 +4,6 @@ import './App.css';
 
 // API
 import { authAPI } from './api/auth';
-import { domainsAPI } from './api/domains';
 
 // Components
 import LoginForm from './components/Auth/LoginForm';

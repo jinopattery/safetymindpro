@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { domainsAPI } from '../api/domains';
 import GraphEditor from './GraphEditor';
@@ -19,18 +19,7 @@ function WorkspacePage({ user, onLogout }) {
   const [loading, setLoading] = useState(false);
   const [saveStatus, setSaveStatus] = useState('');
 
-  useEffect(() => {
-    loadDomains();
-  }, []);
-
-  useEffect(() => {
-    if (selectedDomain) {
-      loadDomainInfo(selectedDomain);
-      loadDomainStyling(selectedDomain);
-    }
-  }, [selectedDomain]);
-
-  const loadDomains = async () => {
+  const loadDomains = useCallback(async () => {
     try {
       const data = await domainsAPI.getDomains();
       setDomains(data);
@@ -40,7 +29,18 @@ function WorkspacePage({ user, onLogout }) {
     } catch (error) {
       console.error('Failed to load domains:', error);
     }
-  };
+  }, [selectedDomain]);
+
+  useEffect(() => {
+    loadDomains();
+  }, [loadDomains]);
+
+  useEffect(() => {
+    if (selectedDomain) {
+      loadDomainInfo(selectedDomain);
+      loadDomainStyling(selectedDomain);
+    }
+  }, [selectedDomain]);
 
   const loadDomainInfo = async (domain) => {
     try {

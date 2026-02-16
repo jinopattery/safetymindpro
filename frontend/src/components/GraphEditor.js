@@ -62,8 +62,8 @@ function GraphEditor({ graph, domainInfo, domainStyling, onGraphChange }) {
     };
   };
 
-  // Apply domain styling to edges
-  const getEdgeStyle = (edgeType) => {
+  // Apply domain styling to edges - wrap in useCallback
+  const getEdgeStyle = useCallback((edgeType) => {
     if (!domainStyling || !domainStyling.edge_styles) return {};
     
     const style = domainStyling.edge_styles[edgeType] || {};
@@ -72,7 +72,7 @@ function GraphEditor({ graph, domainInfo, domainStyling, onGraphChange }) {
       strokeWidth: style.strokeWidth || 2,
       strokeDasharray: style.strokeDasharray || undefined
     };
-  };
+  }, [domainStyling]);
 
   // Get layer color based on node type
   const getLayerInfo = (nodeType) => {
@@ -114,7 +114,7 @@ function GraphEditor({ graph, domainInfo, domainStyling, onGraphChange }) {
         }, eds)
       );
     },
-    [selectedEdgeType, domainInfo, domainStyling, setEdges]
+    [selectedEdgeType, domainInfo, domainStyling, setEdges, getEdgeStyle]
   );
 
   // Smart grid-based positioning
