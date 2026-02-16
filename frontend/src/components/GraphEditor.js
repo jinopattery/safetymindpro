@@ -105,7 +105,6 @@ function GraphEditor({ graph, domainInfo, domainStyling, onGraphChange }) {
         addEdge({
           ...params,
           type: edgeType,
-          data: { edgeType },
           animated: domainStyling?.edge_styles?.[edgeType]?.animated || false,
           markerEnd: {
             type: MarkerType.ArrowClosed,
@@ -138,11 +137,13 @@ function GraphEditor({ graph, domainInfo, domainStyling, onGraphChange }) {
     return position;
   };
 
-  // Check for duplicate labels
+  // Check for duplicate labels - exact match
   const isDuplicateLabel = (label) => {
-    return nodes.some(node => 
-      node.data.label.toLowerCase().includes(label.toLowerCase())
-    );
+    const normalizedLabel = label.trim().toLowerCase();
+    return nodes.some(node => {
+      const existingLabel = node.data.label.replace(/^[^\s]+\s/, '').trim().toLowerCase(); // Remove emoji
+      return existingLabel === normalizedLabel;
+    });
   };
 
   const addNode = () => {

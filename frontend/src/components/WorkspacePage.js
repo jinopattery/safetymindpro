@@ -29,7 +29,8 @@ function WorkspacePage({ user, onLogout }) {
     } catch (error) {
       console.error('Failed to load domains:', error);
     }
-  }, [selectedDomain]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty deps - only run on mount
 
   useEffect(() => {
     loadDomains();
