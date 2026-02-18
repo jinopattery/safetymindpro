@@ -94,3 +94,54 @@ class UniversalGraphData(Base):
     
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class FMEAAnalysis(Base):
+    """
+    FMEA Analysis model for storing failure mode and effects analyses
+    
+    The description field stores diagram data as JSON for block diagrams,
+    system structure diagrams, and other visual representations.
+    """
+    __tablename__ = "fmea_analyses"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    description = Column(Text)  # Stores diagram data as JSON
+    system = Column(String, nullable=False)
+    subsystem = Column(String)
+    owner_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    owner = relationship("User", backref="fmea_analyses")
+    failure_modes = relationship("FailureMode", back_populates="analysis", cascade="all, delete-orphan")
+
+
+class FailureMode(Base):
+    """
+    Failure Mode model for individual failure modes within an FMEA analysis
+    """
+    __tablename__ = "failure_modes"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    analysis_id = Column(Integer, ForeignKey("fmea_analyses.id"), nullable=False)
+    component = Column(String, nullable=False)
+    function = Column(String, nullable=False)
+    failure_mode = Column(String, nullable=False)
+    failure_effects = Column(Text, nullable=False)
+    failure_causes = Column(Text, nullable=False)
+    severity = Column(Integer, nullable=False)
+    occurrence = Column(Integer, nullable=False)
+    detection = Column(Integer, nullable=False)
+    rpn = Column(Integer, nullable=False)
+    current_controls = Column(Text)
+    recommended_actions = Column(Text)
+    responsibility = Column(String)
+    target_date = Column(DateTime)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    analysis = relationship("FMEAAnalysis", back_populates="failure_modes")
