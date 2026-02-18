@@ -215,14 +215,29 @@ or
 ## User-Specific Storage
 
 ### Data Isolation
-Each FMEA analysis is associated with a specific user through the `owner_id` foreign key. This ensures:
-- Users can only access their own analyses
-- Diagram data is isolated per user
-- Multi-tenancy support for the application
+Each FMEA analysis can be associated with a specific user through the `owner_id` foreign key. 
 
-### Access Pattern
+**Current Implementation:**
+- The `owner_id` field is currently nullable (optional)
+- This allows for analyses without user ownership for testing and migration
+- The system works with or without user authentication
+
+**Future Enhancement:**
+For proper multi-tenancy and data isolation, the following should be implemented:
+- Make `owner_id` required (nullable=False) for all new analyses
+- Update FMEA creation endpoints to automatically set owner_id from authenticated user
+- Add access control checks to ensure users can only access their own analyses
+- Implement role-based permissions for shared analyses
+
+### Access Pattern (Current)
+1. User creates or selects an FMEA analysis (with or without authentication)
+2. User creates/modifies diagrams through the frontend
+3. Diagrams are saved to the analysis
+4. Any user with the analysis ID can load the diagrams
+
+### Access Pattern (Recommended Future Implementation)
 1. User authenticates and receives a user ID
-2. User creates or selects an FMEA analysis
+2. User creates an FMEA analysis (owner_id automatically set)
 3. User creates/modifies diagrams through the frontend
 4. Diagrams are saved to the analysis associated with that user
 5. Only the owner (or users with appropriate permissions) can load the diagrams
@@ -280,16 +295,18 @@ Currently, the system stores only the latest version of each diagram type. Futur
 ## Security Considerations
 
 ### Data Protection
-- Diagram data is stored in the database with user ownership
-- Access control through authentication system
+- Diagram data is stored in the database
+- **Note:** Current implementation does not enforce user ownership for FMEA analyses
+- Future enhancement: Access control through authentication system
 - SQL injection protection through SQLAlchemy ORM
 - No sensitive data should be stored in diagram labels
 
 ### Best Practices
-1. Always validate user ownership before loading diagrams
+1. **Future:** Always validate user ownership before loading diagrams
 2. Sanitize diagram data before rendering in frontend
 3. Implement rate limiting for save operations
 4. Regular database backups
+5. **Recommended:** Update FMEA creation to require and set owner_id from authenticated user
 
 ## Example Usage
 
@@ -367,12 +384,13 @@ print(f"Loaded diagram with {len(diagram['nodes'])} nodes")
 ## Future Enhancements
 
 Planned improvements for diagram storage:
-1. Separate table for diagram data (better performance for large diagrams)
-2. Version control and history tracking
-3. Real-time collaborative editing
-4. Diagram templates for common automotive systems
-5. Export to standard formats (SVG, PNG, PDF)
-6. Import from other FMEA tools
+1. **User authentication and access control** - Enforce owner_id requirement and implement proper access control
+2. Separate table for diagram data (better performance for large diagrams)
+3. Version control and history tracking
+4. Real-time collaborative editing
+5. Diagram templates for common automotive systems
+6. Export to standard formats (SVG, PNG, PDF)
+7. Import from other FMEA tools
 
 ## Support
 
