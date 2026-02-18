@@ -12,21 +12,21 @@ logging.basicConfig(level=logging.INFO)
 # Filter out passlib bcrypt warning from logs
 class PasslibBcryptFilter(logging.Filter):
     def filter(self, record):
-        # Filter out the bcrypt version warning from passlib
+        # Filter out the specific bcrypt version warning from passlib
+        # This is a known compatibility issue between passlib 1.7.4 and bcrypt 4.x
         msg = record.getMessage() if hasattr(record, 'getMessage') else str(record.msg)
-        msg_lower = msg.lower()
-        # Filter out the specific bcrypt warning
-        if 'bcrypt' in msg_lower and ('trapped' in msg_lower or '__about__' in msg_lower):
+        # Only filter the exact warning about bcrypt version reading
+        if '(trapped) error reading bcrypt version' in msg:
             return False
         return True
 
-# Add filter to passlib logger and root logger
-passlib_logger = logging.getLogger('passlib')
-passlib_logger.addFilter(PasslibBcryptFilter())
-passlib_logger.setLevel(logging.ERROR)  # Only show errors from passlib
+# Add filter to all passlib loggers
+for logger_name in ['passlib', 'passlib.handlers', 'passlib.handlers.bcrypt']:
+    lib_logger = logging.getLogger(logger_name)
+    lib_logger.addFilter(PasslibBcryptFilter())
 
-# Also filter warnings
-warnings.filterwarnings('ignore', message='.*bcrypt.*')
+# Filter only the specific bcrypt warning, not all bcrypt-related warnings
+warnings.filterwarnings('ignore', message='.*(trapped).*error reading bcrypt version.*', module='passlib.*')
 
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
