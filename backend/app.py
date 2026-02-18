@@ -11,7 +11,7 @@ import logging
 from backend.database import engine, Base
 
 # Import only working routers
-from backend.routers import domains, auth
+from backend.routers import domains, auth, diagrams, fmea
 from backend.routers.domains import router_v2  # Import v2 router
 
 # Configure logging
@@ -52,6 +52,8 @@ app.add_middleware(
 app.include_router(auth.router, prefix="/api/v1", tags=["Authentication"])
 app.include_router(domains.router, tags=["Domains"])
 app.include_router(router_v2, tags=["Domains V2 - Universal Architecture"])
+app.include_router(diagrams.router, tags=["Diagrams"])
+app.include_router(fmea.router, tags=["FMEA"])
 
 # Root endpoint
 @app.get("/")
@@ -67,7 +69,9 @@ async def root():
             "domains_v1": "/api/v1/domains/",
             "domains_v2": "/api/v2/domains/",
             "login": "/api/v1/auth/login",
-            "signup": "/api/v1/auth/signup"
+            "signup": "/api/v1/auth/signup",
+            "diagrams": "/api/v1/diagrams/",
+            "fmea": "/api/v1/fmea/"
         }
     }
 
@@ -90,6 +94,8 @@ async def startup_event():
     logger.info("✅ Health Check: http://127.0.0.1:8000/health")
     logger.info("✅ Domains API v1: http://127.0.0.1:8000/api/v1/domains/")
     logger.info("✅ Domains API v2 (Universal): http://127.0.0.1:8000/api/v2/domains/")
+    logger.info("✅ Diagrams API: http://127.0.0.1:8000/api/v1/diagrams/")
+    logger.info("✅ FMEA API: http://127.0.0.1:8000/api/v1/fmea/")
     logger.info("=" * 70)
 
 # Error handlers
