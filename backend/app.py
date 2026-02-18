@@ -3,6 +3,7 @@ SafetyMindPro - Main FastAPI Application
 Production-Ready with User Management
 """
 
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -18,20 +19,45 @@ from backend.routers.domains import router_v2  # Import v2 router
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Create database tables
-try:
-    Base.metadata.create_all(bind=engine)
-    logger.info("Database tables created successfully")
-except Exception as e:
-    logger.error(f"Error creating database tables: {e}")
 
-# Create FastAPI app
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Lifespan event handler for FastAPI application startup and shutdown
+    """
+    # Startup: Create database tables
+    try:
+        Base.metadata.create_all(bind=engine)
+        logger.info("Database tables created successfully")
+    except Exception as e:
+        logger.error(f"Error creating database tables: {e}")
+    
+    # Log startup information
+    logger.info("=" * 70)
+    logger.info("SafetyMindPro API Starting...")
+    logger.info("=" * 70)
+    logger.info("✅ API Documentation: http://127.0.0.1:8000/docs")
+    logger.info("✅ Health Check: http://127.0.0.1:8000/health")
+    logger.info("✅ Domains API v1: http://127.0.0.1:8000/api/v1/domains/")
+    logger.info("✅ Domains API v2 (Universal): http://127.0.0.1:8000/api/v2/domains/")
+    logger.info("✅ Diagrams API: http://127.0.0.1:8000/api/v1/diagrams/")
+    logger.info("✅ FMEA API: http://127.0.0.1:8000/api/v1/fmea/")
+    logger.info("=" * 70)
+    
+    yield
+    
+    # Shutdown: cleanup if needed
+    logger.info("SafetyMindPro API shutting down...")
+
+
+# Create FastAPI app with lifespan handler
 app = FastAPI(
     title="SafetyMindPro API",
     description="Multi-Domain Graph Analysis Platform with User Management",
     version="2.0.0",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
+    lifespan=lifespan
 )
 
 # CORS Configuration
@@ -83,20 +109,6 @@ async def health_check():
         "status": "healthy",
         "version": "2.0.0"
     }
-
-# Startup event
-@app.on_event("startup")
-async def startup_event():
-    logger.info("=" * 70)
-    logger.info("SafetyMindPro API Starting...")
-    logger.info("=" * 70)
-    logger.info("✅ API Documentation: http://127.0.0.1:8000/docs")
-    logger.info("✅ Health Check: http://127.0.0.1:8000/health")
-    logger.info("✅ Domains API v1: http://127.0.0.1:8000/api/v1/domains/")
-    logger.info("✅ Domains API v2 (Universal): http://127.0.0.1:8000/api/v2/domains/")
-    logger.info("✅ Diagrams API: http://127.0.0.1:8000/api/v1/diagrams/")
-    logger.info("✅ FMEA API: http://127.0.0.1:8000/api/v1/fmea/")
-    logger.info("=" * 70)
 
 # Error handlers
 @app.exception_handler(Exception)
