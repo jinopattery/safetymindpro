@@ -3,11 +3,35 @@ SafetyMindPro - Main FastAPI Application
 Production-Ready with User Management
 """
 
+import logging
+import warnings
+
+# Configure logging FIRST, before any other imports
+logging.basicConfig(level=logging.INFO)
+
+# Filter out passlib bcrypt warning from logs
+class PasslibBcryptFilter(logging.Filter):
+    def filter(self, record):
+        # Filter out the bcrypt version warning from passlib
+        msg = record.getMessage() if hasattr(record, 'getMessage') else str(record.msg)
+        msg_lower = msg.lower()
+        # Filter out the specific bcrypt warning
+        if 'bcrypt' in msg_lower and ('trapped' in msg_lower or '__about__' in msg_lower):
+            return False
+        return True
+
+# Add filter to passlib logger and root logger
+passlib_logger = logging.getLogger('passlib')
+passlib_logger.addFilter(PasslibBcryptFilter())
+passlib_logger.setLevel(logging.ERROR)  # Only show errors from passlib
+
+# Also filter warnings
+warnings.filterwarnings('ignore', message='.*bcrypt.*')
+
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-import logging
 
 from backend.database import engine, Base
 
@@ -15,8 +39,6 @@ from backend.database import engine, Base
 from backend.routers import domains, auth, diagrams, fmea
 from backend.routers.domains import router_v2  # Import v2 router
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
