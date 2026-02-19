@@ -100,11 +100,13 @@ function GraphEditor({ graph, domainInfo, domainStyling, onGraphChange }) {
     (params) => {
       const edgeType = selectedEdgeType || (domainInfo?.edge_types[0]?.name || 'default');
       const edgeStyle = getEdgeStyle(edgeType);
+      const reactFlowType = domainStyling?.edge_styles?.[edgeType]?.type || 'default';
       
       setEdges((eds) =>
         addEdge({
           ...params,
-          type: edgeType,
+          type: reactFlowType,
+          data: { edgeType },
           animated: domainStyling?.edge_styles?.[edgeType]?.animated || false,
           markerEnd: {
             type: MarkerType.ArrowClosed,
