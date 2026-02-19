@@ -5,9 +5,10 @@ Provides REST API endpoints for domain management and operations.
 Supports both v1 (legacy adapters) and v2 (universal mappers) architectures.
 """
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 from typing import List, Dict, Any, Optional
 from pydantic import BaseModel
+from sqlalchemy.orm import Session
 
 from backend.domains.registry import registry
 from backend.core.graph import Graph, NodeData, EdgeData
@@ -18,6 +19,9 @@ from backend.algorithms import (
     risk_analysis,
     timeseries_analysis
 )
+from backend.database import get_db
+from backend.models import Graph as GraphModel
+from backend.routers.auth import get_current_user
 
 router = APIRouter(prefix="/api/v1/domains", tags=["domains"])
 
@@ -536,34 +540,140 @@ class GraphExportRequest(BaseModel):
 
 
 @router.post("/save-graph")
-async def save_graph(request: GraphSaveRequest):
+async def save_graph(
+    request: GraphSaveRequest,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user)
+):
     """
-    Save a graph to backend storage
-    
+    Save a graph to the database.
+
     Args:
         request: Graph save request
-        
+
     Returns:
         Success status and graph ID
     """
     try:
-        # Generate a unique ID (in production, this would be database ID)
-        import hashlib
-        import time
-        graph_id = hashlib.md5(f"{request.name}{time.time()}".encode()).hexdigest()[:12]
-        
+        graph_record = GraphModel(
+            name=request.name,
+            domain=request.domain,
+            graph_data=request.graph_data,
+            owner_id=current_user.id
+        )
+        db.add(graph_record)
+        db.commit()
+        db.refresh(graph_record)
+
         return {
             "success": True,
-            "graph_id": graph_id,
-            "name": request.name,
+            "graph_id": graph_record.id,
+            "name": graph_record.name,
             "message": "Graph saved successfully"
         }
-    
+
     except Exception as e:
+        db.rollback()
         raise HTTPException(
             status_code=500,
             detail=f"Failed to save graph: {str(e)}"
         )
+
+
+@router.get("/list-graphs")
+async def list_graphs(
+    domain: Optional[str] = Query(None, description="Filter by domain"),
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user)
+):
+    """
+    List saved graphs for the current user.
+
+    Args:
+        domain: Optional domain filter
+
+    Returns:
+        List of saved graph summaries
+    """
+    query = db.query(GraphModel).filter(GraphModel.owner_id == current_user.id)
+    if domain:
+        query = query.filter(GraphModel.domain == domain)
+    graphs = query.order_by(GraphModel.updated_at.desc()).all()
+
+    return [
+        {
+            "id": g.id,
+            "name": g.name,
+            "domain": g.domain,
+            "node_count": len(g.graph_data.get("nodes", [])) if g.graph_data else 0,
+            "edge_count": len(g.graph_data.get("edges", [])) if g.graph_data else 0,
+            "updated_at": g.updated_at.isoformat() if g.updated_at else None,
+            "created_at": g.created_at.isoformat() if g.created_at else None,
+        }
+        for g in graphs
+    ]
+
+
+@router.get("/load-graph/{graph_id}")
+async def load_graph(
+    graph_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user)
+):
+    """
+    Load a saved graph by ID.
+
+    Args:
+        graph_id: The graph's database ID
+
+    Returns:
+        Full graph data
+    """
+    graph = db.query(GraphModel).filter(
+        GraphModel.id == graph_id,
+        GraphModel.owner_id == current_user.id
+    ).first()
+    if not graph:
+        raise HTTPException(status_code=404, detail="Graph not found")
+
+    return {
+        "success": True,
+        "graph": {
+            "id": graph.id,
+            "name": graph.name,
+            "domain": graph.domain,
+            "graph_data": graph.graph_data,
+            "created_at": graph.created_at.isoformat() if graph.created_at else None,
+            "updated_at": graph.updated_at.isoformat() if graph.updated_at else None,
+        },
+    }
+
+
+@router.delete("/delete-graph/{graph_id}")
+async def delete_graph(
+    graph_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user)
+):
+    """
+    Delete a saved graph by ID.
+
+    Args:
+        graph_id: The graph's database ID
+
+    Returns:
+        Success status
+    """
+    graph = db.query(GraphModel).filter(
+        GraphModel.id == graph_id,
+        GraphModel.owner_id == current_user.id
+    ).first()
+    if not graph:
+        raise HTTPException(status_code=404, detail="Graph not found")
+
+    db.delete(graph)
+    db.commit()
+    return {"success": True, "message": "Graph deleted"}
 
 
 @router.post("/export-graph")
