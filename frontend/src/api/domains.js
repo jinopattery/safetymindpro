@@ -76,6 +76,25 @@ export const domainsAPI = {
     return response.data;
   },
 
+  // List saved graphs (optionally filtered by domain)
+  listGraphs: async (domain = null) => {
+    const params = domain ? { domain } : {};
+    const response = await axios.get(`${API_BASE}/domains/list-graphs`, { params });
+    return response.data;
+  },
+
+  // Load a graph by ID
+  loadGraph: async (graphId) => {
+    const response = await axios.get(`${API_BASE}/domains/load-graph/${graphId}`);
+    return response.data;
+  },
+
+  // Delete a graph by ID
+  deleteGraph: async (graphId) => {
+    const response = await axios.delete(`${API_BASE}/domains/delete-graph/${graphId}`);
+    return response.data;
+  },
+
   // Export graph
   exportGraph: async (graphData, format = 'json') => {
     const response = await axios.post(`${API_BASE}/domains/export-graph`, {
