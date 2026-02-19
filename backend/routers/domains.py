@@ -547,10 +547,6 @@ async def save_graph(request: GraphSaveRequest):
         Success status and graph ID
     """
     try:
-        # For now, we'll just validate and return
-        # In a real implementation, this would save to database
-        graph = Graph.from_dict(request.graph_data)
-        
         # Generate a unique ID (in production, this would be database ID)
         import hashlib
         import time

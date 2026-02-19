@@ -12,6 +12,8 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 import './GraphEditor.css';
 
+const VALID_REACTFLOW_EDGE_TYPES = ['default', 'straight', 'step', 'smoothstep', 'bezier'];
+
 function GraphEditor({ graph, domainInfo, domainStyling, onGraphChange }) {
   const [nodes, setNodes, onNodesChange] = useNodesState(graph.nodes || []);
   const [edges, setEdges, onEdgesChange] = useEdgesState(graph.edges || []);
@@ -100,11 +102,15 @@ function GraphEditor({ graph, domainInfo, domainStyling, onGraphChange }) {
     (params) => {
       const edgeType = selectedEdgeType || (domainInfo?.edge_types[0]?.name || 'default');
       const edgeStyle = getEdgeStyle(edgeType);
+      // Map domain edge type to a ReactFlow built-in type; fall back to 'default'
+      const reactFlowType = domainStyling?.edge_styles?.[edgeType]?.type || 'default';
+      const resolvedType = VALID_REACTFLOW_EDGE_TYPES.includes(reactFlowType) ? reactFlowType : 'default';
       
       setEdges((eds) =>
         addEdge({
           ...params,
-          type: edgeType,
+          type: resolvedType,
+          data: { edgeType },
           animated: domainStyling?.edge_styles?.[edgeType]?.animated || false,
           markerEnd: {
             type: MarkerType.ArrowClosed,
