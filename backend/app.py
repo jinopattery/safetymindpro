@@ -3,10 +3,35 @@ SafetyMindPro - Main FastAPI Application
 Production-Ready with User Management
 """
 
+import logging
+import warnings
+
+# Configure logging FIRST, before any other imports
+logging.basicConfig(level=logging.INFO)
+
+# Filter out passlib bcrypt warning from logs
+class PasslibBcryptFilter(logging.Filter):
+    def filter(self, record):
+        # Filter out the specific bcrypt version warning from passlib
+        # This is a known compatibility issue between passlib 1.7.4 and bcrypt 4.x
+        msg = record.getMessage() if hasattr(record, 'getMessage') else str(record.msg)
+        # Only filter the exact warning about bcrypt version reading
+        if '(trapped) error reading bcrypt version' in msg:
+            return False
+        return True
+
+# Add filter to all passlib loggers
+for logger_name in ['passlib', 'passlib.handlers', 'passlib.handlers.bcrypt']:
+    lib_logger = logging.getLogger(logger_name)
+    lib_logger.addFilter(PasslibBcryptFilter())
+
+# Filter only the specific bcrypt warning, not all bcrypt-related warnings
+warnings.filterwarnings('ignore', message='.*(trapped).*error reading bcrypt version.*', module='passlib.*')
+
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-import logging
 
 from backend.database import engine, Base
 
@@ -14,24 +39,47 @@ from backend.database import engine, Base
 from backend.routers import domains, auth, diagrams, fmea
 from backend.routers.domains import router_v2  # Import v2 router
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Create database tables
-try:
-    Base.metadata.create_all(bind=engine)
-    logger.info("Database tables created successfully")
-except Exception as e:
-    logger.error(f"Error creating database tables: {e}")
 
-# Create FastAPI app
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Lifespan event handler for FastAPI application startup and shutdown
+    """
+    # Startup: Create database tables
+    try:
+        Base.metadata.create_all(bind=engine)
+        logger.info("Database tables created successfully")
+    except Exception as e:
+        logger.error(f"Error creating database tables: {e}")
+    
+    # Log startup information
+    logger.info("=" * 70)
+    logger.info("SafetyMindPro API Starting...")
+    logger.info("=" * 70)
+    logger.info("✅ API Documentation: http://127.0.0.1:8000/docs")
+    logger.info("✅ Health Check: http://127.0.0.1:8000/health")
+    logger.info("✅ Domains API v1: http://127.0.0.1:8000/api/v1/domains/")
+    logger.info("✅ Domains API v2 (Universal): http://127.0.0.1:8000/api/v2/domains/")
+    logger.info("✅ Diagrams API: http://127.0.0.1:8000/api/v1/diagrams/")
+    logger.info("✅ FMEA API: http://127.0.0.1:8000/api/v1/fmea/")
+    logger.info("=" * 70)
+    
+    yield
+    
+    # Shutdown: cleanup if needed
+    logger.info("SafetyMindPro API shutting down...")
+
+
+# Create FastAPI app with lifespan handler
 app = FastAPI(
     title="SafetyMindPro API",
     description="Multi-Domain Graph Analysis Platform with User Management",
     version="2.0.0",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
+    lifespan=lifespan
 )
 
 # CORS Configuration
@@ -83,20 +131,6 @@ async def health_check():
         "status": "healthy",
         "version": "2.0.0"
     }
-
-# Startup event
-@app.on_event("startup")
-async def startup_event():
-    logger.info("=" * 70)
-    logger.info("SafetyMindPro API Starting...")
-    logger.info("=" * 70)
-    logger.info("✅ API Documentation: http://127.0.0.1:8000/docs")
-    logger.info("✅ Health Check: http://127.0.0.1:8000/health")
-    logger.info("✅ Domains API v1: http://127.0.0.1:8000/api/v1/domains/")
-    logger.info("✅ Domains API v2 (Universal): http://127.0.0.1:8000/api/v2/domains/")
-    logger.info("✅ Diagrams API: http://127.0.0.1:8000/api/v1/diagrams/")
-    logger.info("✅ FMEA API: http://127.0.0.1:8000/api/v1/fmea/")
-    logger.info("=" * 70)
 
 # Error handlers
 @app.exception_handler(Exception)
