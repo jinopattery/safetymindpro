@@ -34,11 +34,29 @@ const LAYERS = [
   },
 ];
 
+// Strict hierarchy connection rules: [sourceLayer, targetLayer] → edgeType
+// Form→Form (child), Form→Function (performs), Form→Failure (has_failure),
+// Function→Function (child), Failure→Failure (child)
+const HIERARCHY_RULES = [
+  { src: 'form',     tgt: 'form',     edgeType: 'form_hierarchy',    hint: 'Form→Form (child)' },
+  { src: 'form',     tgt: 'function', edgeType: 'performs_function', hint: 'Form→Function (performs)' },
+  { src: 'form',     tgt: 'failure',  edgeType: 'has_failure',       hint: 'Form→Failure (has_failure)' },
+  { src: 'function', tgt: 'function', edgeType: 'function_flow',     hint: 'Function→Function (child)' },
+  { src: 'failure',  tgt: 'failure',  edgeType: 'failure_propagation', hint: 'Failure→Failure (child)' },
+];
+
+const HIERARCHY_ALLOWED_SUMMARY = HIERARCHY_RULES.map(r => r.hint).join(', ');
+
+const HIERARCHY_HINTS_BY_LAYER = {
+  form:     HIERARCHY_RULES.filter(r => r.src === 'form').map(r => r.hint).join(' · '),
+  function: ['Function→Function (child)', 'To link: draw from a Form node'].join(' · '),
+  failure:  ['Failure→Failure (child)',   'To link: draw from a Form node'].join(' · '),
+};
+
 function GraphEditor({ graph, domainInfo, domainStyling, onGraphChange, activeLayer, onLayerChange }) {
   const [nodes, setNodes, onNodesChange] = useNodesState(graph.nodes || []);
   const [edges, setEdges, onEdgesChange] = useEdgesState(graph.edges || []);
   const [selectedNodeType, setSelectedNodeType] = useState(null);
-  const [selectedEdgeType, setSelectedEdgeType] = useState(null);
   const [nodeLabel, setNodeLabel] = useState('');
   const [validationError, setValidationError] = useState('');
   const updateTimeoutRef = useRef(null);
@@ -180,9 +198,32 @@ function GraphEditor({ graph, domainInfo, domainStyling, onGraphChange, activeLa
     labelInputRef.current?.focus();
   };
 
+  // Determine the required edge type based on the strict layer hierarchy.
+  // Rules are defined in HIERARCHY_RULES above.
+  const getHierarchyEdgeType = useCallback((srcLayer, tgtLayer) => {
+    const rule = HIERARCHY_RULES.find(r => r.src === srcLayer && r.tgt === tgtLayer);
+    return rule ? rule.edgeType : null;
+  }, []);
+
   const onConnect = useCallback(
     (params) => {
-      const edgeType = selectedEdgeType || domainInfo?.edge_types[0]?.name || 'default';
+      const sourceNode = nodes.find(n => n.id === params.source);
+      const targetNode = nodes.find(n => n.id === params.target);
+
+      if (!sourceNode || !targetNode) return;
+
+      const srcLayer = sourceNode.data?.layer;
+      const tgtLayer = targetNode.data?.layer;
+      const edgeType = getHierarchyEdgeType(srcLayer, tgtLayer);
+
+      if (!edgeType) {
+        setValidationError(
+          `Cannot connect ${srcLayer} → ${tgtLayer}. Allowed: ${HIERARCHY_ALLOWED_SUMMARY}.`
+        );
+        return;
+      }
+
+      setValidationError('');
       const edgeStyle = getEdgeStyle(edgeType);
       const reactFlowType = domainStyling?.edge_styles?.[edgeType]?.type || 'default';
       setEdges(eds => addEdge({
@@ -194,7 +235,7 @@ function GraphEditor({ graph, domainInfo, domainStyling, onGraphChange, activeLa
         style: edgeStyle,
       }, eds));
     },
-    [selectedEdgeType, domainInfo, domainStyling, setEdges, getEdgeStyle]
+    [nodes, getHierarchyEdgeType, domainStyling, setEdges, getEdgeStyle]
   );
 
   const onNodesDelete = useCallback(
@@ -262,25 +303,14 @@ function GraphEditor({ graph, domainInfo, domainStyling, onGraphChange, activeLa
           <span className="validation-error" role="alert">{validationError}</span>
         )}
 
-        {/* Edge type selector */}
-        {domainInfo?.edge_types?.length > 1 && (
-          <select
-            value={selectedEdgeType || ''}
-            onChange={e => setSelectedEdgeType(e.target.value)}
-            className="edge-type-select"
-            aria-label="Edge type"
-            tabIndex={0}
-          >
-            <option value="">Edge…</option>
-            {domainInfo.edge_types.map(et => (
-              <option key={et.name} value={et.name}>{et.display_name}</option>
-            ))}
-          </select>
-        )}
+        {/* Hierarchy connection hint derived from HIERARCHY_HINTS_BY_LAYER */}
+        <span className="hierarchy-hint">
+          {HIERARCHY_HINTS_BY_LAYER[activeLayer] || ''}
+        </span>
       </div>
 
       {/* Canvas */}
-      <div className="graph-canvas">
+      <div className={`graph-canvas graph-canvas--${activeLayer}`}>
         <ReactFlow
           nodes={nodes}
           edges={edges}

@@ -112,7 +112,7 @@
 
 /* ── Sidebar ─────────────────────────────────────────────────────── */
 .workspace-sidebar {
-  width: 240px;
+  width: 200px;
   background: #1e2228;
   border-right: 1px solid #2d3139;
   overflow-y: auto;
@@ -121,6 +121,98 @@
   gap: 0;
   flex-shrink: 0;
   color: #cdd6f4;
+}
+
+/* ── Hierarchy sidebar ───────────────────────────────────────────── */
+.workspace-hierarchy {
+  width: 220px;
+  background: #1a1d23;
+  border-right: 1px solid #2d3139;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  flex-shrink: 0;
+  color: #cdd6f4;
+}
+
+/* ── Hierarchy tree nodes ────────────────────────────────────────── */
+.htree-root {
+  display: flex;
+  flex-direction: column;
+  padding: 2px 0 6px;
+}
+
+.htree-node {
+  display: flex;
+  flex-direction: column;
+}
+
+.htree-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px 3px 4px;
+  font-size: 0.75rem;
+  color: #a6adc8;
+  cursor: pointer;
+  border-radius: 3px;
+  transition: background 0.1s, color 0.1s;
+}
+
+.htree-item:hover {
+  background: rgba(255,255,255,0.06);
+  color: #cdd6f4;
+}
+
+.htree-selected {
+  background: rgba(99,102,241,0.2);
+  color: #cdd6f4;
+}
+
+.htree-form   { color: #93c5fd; }
+.htree-function { color: #c4b5fd; }
+.htree-failure  { color: #fca5a5; }
+
+.htree-toggle {
+  background: none;
+  border: none;
+  color: #6b7280;
+  cursor: pointer;
+  font-size: 0.65rem;
+  padding: 0 2px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.htree-toggle:hover { color: #cdd6f4; }
+
+.htree-icon {
+  font-size: 0.75rem;
+  flex-shrink: 0;
+}
+
+.htree-label {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.75rem;
+}
+
+.htree-orphan-section {
+  margin-top: 6px;
+  border-top: 1px solid #2d3139;
+  padding-top: 4px;
+}
+
+.htree-orphan-label {
+  padding: 4px 10px;
+  font-size: 0.65rem;
+  color: #6b7280;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 /* ── Explorer header ─────────────────────────────────────────────── */
@@ -674,13 +766,15 @@
 
 /* ── Responsive ──────────────────────────────────────────────────── */
 @media (max-width: 900px) {
-  .workspace-sidebar { width: 180px; }
+  .workspace-sidebar { width: 160px; }
+  .workspace-hierarchy { width: 180px; }
   .domain-tab-text { display: none; }
   .algo-select { min-width: 110px; }
 }
 
 @media (max-width: 640px) {
   .workspace-sidebar { display: none; }
+  .workspace-hierarchy { display: none; }
   .workspace-header-center { display: none; }
 }
 

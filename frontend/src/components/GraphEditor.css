@@ -157,12 +157,26 @@
   font-weight: 500;
 }
 
+.hierarchy-hint {
+  font-size: 0.68rem;
+  color: #94a3b8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 420px;
+  flex-shrink: 1;
+}
+
 /* ── Canvas ─────────────────────────────────────────────────────── */
 .graph-canvas {
   flex: 1;
   position: relative;
   min-height: 0;
 }
+
+.graph-canvas--form     .react-flow__background { background: rgba(59,130,246,0.03); }
+.graph-canvas--function .react-flow__background { background: rgba(139,92,246,0.03); }
+.graph-canvas--failure  .react-flow__background { background: rgba(239,68,68,0.03); }
 
 /* ── Layer stats panel ──────────────────────────────────────────── */
 .layer-stats-panel {
