@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { domainsAPI } from '../api/domains';
 import GraphEditor from './GraphEditor';
@@ -98,6 +98,173 @@ const FileIcon = () => (
     <polyline points="14 2 14 8 20 8"/>
   </svg>
 );
+
+// ── Hierarchy Explorer ────────────────────────────────────────────
+
+// Build a form-first hierarchy tree from graph nodes + edges
+function buildHierarchyTree(graph) {
+  const { nodes = [], edges = [] } = graph;
+  const nodeMap = {};
+  nodes.forEach(n => { nodeMap[n.id] = n; });
+
+  // Classify edges into hierarchy buckets
+  const formChildren = {};     // form → child form ids   (form_hierarchy)
+  const formFunctions = {};    // form → function ids     (performs_function)
+  const formFailures = {};     // form → failure ids      (has_failure)
+  const funcChildren = {};     // function → child func ids (function_flow)
+  const failChildren = {};     // failure → child fail ids  (failure_propagation)
+
+  const childFormIds = new Set();
+  const linkedFuncIds = new Set();
+  const linkedFailIds = new Set();
+
+  edges.forEach(e => {
+    const t = e.data?.edgeType;
+    const src = e.source, tgt = e.target;
+    if (!nodeMap[src] || !nodeMap[tgt]) return;
+    if (t === 'form_hierarchy')    { (formChildren[src]  = formChildren[src]  || []).push(tgt); childFormIds.add(tgt); }
+    if (t === 'performs_function') { (formFunctions[src] = formFunctions[src] || []).push(tgt); linkedFuncIds.add(tgt); }
+    if (t === 'has_failure')       { (formFailures[src]  = formFailures[src]  || []).push(tgt); linkedFailIds.add(tgt); }
+    if (t === 'function_flow')     { (funcChildren[src]  = funcChildren[src]  || []).push(tgt); linkedFuncIds.add(tgt); }
+    if (t === 'failure_propagation'){ (failChildren[src] = failChildren[src]  || []).push(tgt); linkedFailIds.add(tgt); }
+  });
+
+  const rootForms = nodes.filter(n => n.data?.layer === 'form' && !childFormIds.has(n.id));
+
+  const orphanFunctions = nodes.filter(n => n.data?.layer === 'function' && !linkedFuncIds.has(n.id));
+  const orphanFailures  = nodes.filter(n => n.data?.layer === 'failure'  && !linkedFailIds.has(n.id));
+
+  return { rootForms, formChildren, formFunctions, formFailures, funcChildren, failChildren, nodeMap, orphanFunctions, orphanFailures };
+}
+
+function HierarchyExplorer({ graph, onNodeSelect, selectedNodeId }) {
+  const [expanded, setExpanded] = useState({});
+  const [panelOpen, setPanelOpen] = useState(true);
+
+  const tree = useMemo(() => buildHierarchyTree(graph), [graph]);
+
+  const toggle = (id) => setExpanded(prev => ({ ...prev, [id]: !prev[id] }));
+  const isOpen = (id) => expanded[id] !== false; // default open
+
+  const renderFunctions = (functionIds, depth) => functionIds.map(functionId => {
+    const fn = tree.nodeMap[functionId];
+    if (!fn) return null;
+    const children = tree.funcChildren[functionId] || [];
+    const label = fn.data?.label || functionId;
+    return (
+      <div key={functionId} className="htree-node" style={{ paddingLeft: 10 + depth * 12 }}>
+        <div
+          className={`htree-item htree-function${selectedNodeId === functionId ? ' htree-selected' : ''}`}
+          onClick={() => onNodeSelect && onNodeSelect(functionId)}
+        >
+          {children.length > 0 && (
+            <button className="htree-toggle" onClick={e => { e.stopPropagation(); toggle(functionId); }}>
+              {isOpen(functionId) ? '▾' : '▸'}
+            </button>
+          )}
+          <span className="htree-icon">⚙️</span>
+          <span className="htree-label">{label}</span>
+        </div>
+        {children.length > 0 && isOpen(functionId) && renderFunctions(children, depth + 1)}
+      </div>
+    );
+  });
+
+  const renderFailures = (failureIds, depth) => failureIds.map(failureId => {
+    const fa = tree.nodeMap[failureId];
+    if (!fa) return null;
+    const children = tree.failChildren[failureId] || [];
+    const label = fa.data?.label || failureId;
+    return (
+      <div key={failureId} className="htree-node" style={{ paddingLeft: 10 + depth * 12 }}>
+        <div
+          className={`htree-item htree-failure${selectedNodeId === failureId ? ' htree-selected' : ''}`}
+          onClick={() => onNodeSelect && onNodeSelect(failureId)}
+        >
+          {children.length > 0 && (
+            <button className="htree-toggle" onClick={e => { e.stopPropagation(); toggle(failureId); }}>
+              {isOpen(failureId) ? '▾' : '▸'}
+            </button>
+          )}
+          <span className="htree-icon">⚠️</span>
+          <span className="htree-label">{label}</span>
+        </div>
+        {children.length > 0 && isOpen(failureId) && renderFailures(children, depth + 1)}
+      </div>
+    );
+  });
+
+  const renderForm = (formId, depth) => {
+    const form = tree.nodeMap[formId];
+    if (!form) return null;
+    const childForms = tree.formChildren[formId] || [];
+    const funcs  = tree.formFunctions[formId] || [];
+    const fails  = tree.formFailures[formId]  || [];
+    const hasChildren = childForms.length > 0 || funcs.length > 0 || fails.length > 0;
+    const label = form.data?.label || formId;
+    return (
+      <div key={formId} className="htree-node" style={{ paddingLeft: depth * 12 }}>
+        <div
+          className={`htree-item htree-form${selectedNodeId === formId ? ' htree-selected' : ''}`}
+          onClick={() => onNodeSelect && onNodeSelect(formId)}
+        >
+          {hasChildren && (
+            <button className="htree-toggle" onClick={e => { e.stopPropagation(); toggle(formId); }}>
+              {isOpen(formId) ? '▾' : '▸'}
+            </button>
+          )}
+          <span className="htree-icon">🔷</span>
+          <span className="htree-label">{label}</span>
+        </div>
+        {hasChildren && isOpen(formId) && (
+          <>
+            {renderFunctions(funcs, depth + 1)}
+            {renderFailures(fails, depth + 1)}
+            {childForms.map(cid => renderForm(cid, depth + 1))}
+          </>
+        )}
+      </div>
+    );
+  };
+
+  const isEmpty = tree.rootForms.length === 0 && tree.orphanFunctions.length === 0 && tree.orphanFailures.length === 0;
+
+  return (
+    <aside className="workspace-hierarchy">
+      <div className="explorer-header">HIERARCHY</div>
+      <div className="explorer-section">
+        <button
+          className="explorer-section-title"
+          onClick={() => setPanelOpen(o => !o)}
+          aria-expanded={panelOpen}
+        >
+          <span className={`explorer-chevron ${panelOpen ? 'open' : ''}`}>▸</span>
+          FORM · FUNCTION · FAILURE
+        </button>
+        {panelOpen && (
+          <div className="htree-root">
+            {isEmpty && (
+              <div className="explorer-empty">No nodes yet.<br/>Add Form nodes and connect them to Functions and Failures.</div>
+            )}
+            {tree.rootForms.map(f => renderForm(f.id, 0))}
+            {tree.orphanFunctions.length > 0 && (
+              <div className="htree-orphan-section">
+                <div className="htree-orphan-label">Unlinked Functions</div>
+                {renderFunctions(tree.orphanFunctions.map(n => n.id), 0)}
+              </div>
+            )}
+            {tree.orphanFailures.length > 0 && (
+              <div className="htree-orphan-section">
+                <div className="htree-orphan-label">Unlinked Failures</div>
+                {renderFailures(tree.orphanFailures.map(n => n.id), 0)}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </aside>
+  );
+}
 
 // ── Save Modal ────────────────────────────────────────────────────
 
@@ -527,6 +694,9 @@ function WorkspacePage({ user, onLogout }) {
             </div>
           )}
         </aside>
+
+        {/* ── Hierarchy explorer sidebar ── */}
+        <HierarchyExplorer graph={graph} />
 
         <main className="workspace-main">
           <div className="workspace-toolbar">
