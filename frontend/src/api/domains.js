@@ -95,6 +95,14 @@ export const domainsAPI = {
     return response.data;
   },
 
+  // Update an existing saved graph in-place (overwrite)
+  updateGraph: async (graphId, graphData, name = null) => {
+    const body = { graph_data: graphData };
+    if (name) body.name = name;
+    const response = await axios.put(`${API_BASE}/domains/update-graph/${graphId}`, body);
+    return response.data;
+  },
+
   // Export graph
   exportGraph: async (graphData, format = 'json') => {
     const response = await axios.post(`${API_BASE}/domains/export-graph`, {

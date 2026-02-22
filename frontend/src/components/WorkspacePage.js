@@ -2,9 +2,32 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { domainsAPI } from '../api/domains';
 import GraphEditor from './GraphEditor';
-import AlgorithmPanel from './AlgorithmPanel';
-import ResultsPanel from './ResultsPanel';
 import './WorkspacePage.css';
+
+// Layer definitions (mirrored from GraphEditor for toolbar buttons)
+const LAYERS = [
+  { id: 'form',     label: 'Structure', title: 'Physical / Logical Structure', shortcut: '1' },
+  { id: 'function', label: 'Behavior',  title: 'Behavioral Structure',         shortcut: '2' },
+  { id: 'failure',  label: 'Risk',      title: 'Risk Structure',               shortcut: '3' },
+];
+
+// Default algorithm parameters
+const getDefaultAlgorithmParams = (algorithmName) => {
+  const defaults = {
+    fmea_risk_analysis:      { rpn_threshold: 100 },
+    flow_balance_analysis:   { tolerance: 0.05 },
+    fraud_detection:         { velocity_threshold: 5, amount_multiplier: 3.0 },
+    correlation_analysis:    { correlation_threshold: 0.7 },
+    portfolio_risk:          {},
+    failure_propagation:     { max_depth: 5 },
+    anomaly_detection:       {},
+    aml_detection:           { structuring_threshold: 10000 },
+    risk_scoring:            {},
+    dependency_propagation:  { max_depth: 4 },
+    critical_components:     { top_n: 5 },
+  };
+  return defaults[algorithmName] || {};
+};
 
 // ── SVG icon components ────────────────────────────────────────────────────
 
@@ -49,14 +72,6 @@ const TrashIcon = () => (
   </svg>
 );
 
-const FolderIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-    stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-    width="16" height="16">
-    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-  </svg>
-);
-
 const BackIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
     stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
@@ -75,99 +90,14 @@ const LogoutIcon = () => (
   </svg>
 );
 
-// ── Saved Diagrams Modal ───────────────────────────────────────────────────
-
-function SavedDiagramsModal({ isOpen, onClose, onLoad, selectedDomain }) {
-  const [graphs, setGraphs] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-
-  const fetchGraphs = useCallback(async () => {
-    setLoading(true);
-    setError('');
-    try {
-      const data = await domainsAPI.listGraphs(selectedDomain || null);
-      setGraphs(data);
-    } catch (err) {
-      setError('Failed to load saved diagrams.');
-    } finally {
-      setLoading(false);
-    }
-  }, [selectedDomain]);
-
-  useEffect(() => {
-    if (isOpen) fetchGraphs();
-  }, [isOpen, fetchGraphs]);
-
-  const handleDelete = async (graphId, name) => {
-    if (!window.confirm(`Delete "${name}"?`)) return;
-    try {
-      await domainsAPI.deleteGraph(graphId);
-      setGraphs(prev => prev.filter(g => g.id !== graphId));
-    } catch {
-      setError('Failed to delete diagram.');
-    }
-  };
-
-  const handleLoad = async (graphId) => {
-    try {
-      const result = await domainsAPI.loadGraph(graphId);
-      if (result.success) {
-        onLoad(result.graph);
-        onClose();
-      }
-    } catch {
-      setError('Failed to load diagram.');
-    }
-  };
-
-  if (!isOpen) return null;
-
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-panel" onClick={e => e.stopPropagation()}>
-        <div className="modal-header">
-          <h3>Saved Diagrams</h3>
-          <button className="modal-close" onClick={onClose} aria-label="Close">×</button>
-        </div>
-        <div className="modal-body">
-          {loading && <div className="modal-loading">Loading…</div>}
-          {error && <div className="modal-error">{error}</div>}
-          {!loading && graphs.length === 0 && !error && (
-            <div className="modal-empty">No saved diagrams yet.</div>
-          )}
-          {graphs.map(g => (
-            <div key={g.id} className="saved-graph-row">
-              <div className="saved-graph-info">
-                <span className="saved-graph-name">{g.name}</span>
-                <span className="saved-graph-meta">
-                  {g.domain} · {g.node_count}N · {g.edge_count}E ·{' '}
-                  {g.updated_at ? new Date(g.updated_at).toLocaleDateString() : '—'}
-                </span>
-              </div>
-              <div className="saved-graph-actions">
-                <button
-                  className="sgraph-btn sgraph-load"
-                  onClick={() => handleLoad(g.id)}
-                  title="Load diagram"
-                >
-                  Load
-                </button>
-                <button
-                  className="sgraph-btn sgraph-delete"
-                  onClick={() => handleDelete(g.id, g.name)}
-                  title="Delete diagram"
-                >
-                  <TrashIcon />
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
+const FileIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+    width="13" height="13">
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+    <polyline points="14 2 14 8 20 8"/>
+  </svg>
+);
 
 // ── Save Modal ────────────────────────────────────────────────────
 
@@ -250,8 +180,22 @@ function WorkspacePage({ user, onLogout }) {
   const [algorithmResults, setAlgorithmResults] = useState(null);
   const [loading, setLoading] = useState(false);
   const [saveStatus, setSaveStatus] = useState('');
-  const [savedModalOpen, setSavedModalOpen] = useState(false);
   const [saveModalOpen, setSaveModalOpen] = useState(false);
+
+  // Layer state (lifted from GraphEditor)
+  const [activeLayer, setActiveLayer] = useState('form');
+
+  // Track whether we are editing a previously-saved diagram
+  const [currentGraphId, setCurrentGraphId] = useState(null);
+  const [currentGraphName, setCurrentGraphName] = useState('');
+
+  // Sidebar file-explorer: list of all saved graphs
+  const [savedGraphs, setSavedGraphs] = useState([]);
+  const [explorerOpen, setExplorerOpen] = useState(true);
+
+  // Algorithm selection for toolbar-middle
+  const [selectedAlgorithm, setSelectedAlgorithm] = useState(null);
+  const [algorithmParams, setAlgorithmParams] = useState({});
 
   const loadDomains = useCallback(async () => {
     try {
@@ -266,7 +210,17 @@ function WorkspacePage({ user, onLogout }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const loadSavedGraphs = useCallback(async () => {
+    try {
+      const data = await domainsAPI.listGraphs(null);
+      setSavedGraphs(data);
+    } catch (err) {
+      console.error('Failed to load saved graphs:', err);
+    }
+  }, []);
+
   useEffect(() => { loadDomains(); }, [loadDomains]);
+  useEffect(() => { loadSavedGraphs(); }, [loadSavedGraphs]);
 
   useEffect(() => {
     if (selectedDomain) {
@@ -299,6 +253,10 @@ function WorkspacePage({ user, onLogout }) {
     setGraph({ nodes: [], edges: [] });
     setAlgorithmResults(null);
     setSaveStatus('');
+    setCurrentGraphId(null);
+    setCurrentGraphName('');
+    setSelectedAlgorithm(null);
+    setAlgorithmParams({});
   };
 
   const handleRunAlgorithm = async (algorithmName, params) => {
@@ -324,12 +282,39 @@ function WorkspacePage({ user, onLogout }) {
       setGraph({ nodes: [], edges: [] });
       setAlgorithmResults(null);
       setSaveStatus('');
+      setCurrentGraphId(null);
+      setCurrentGraphName('');
     }
   };
 
+  // Smart save: overwrite existing file, or open modal for new diagrams
   const handleSaveGraph = async () => {
     if (graph.nodes.length === 0) { alert('Cannot save an empty graph'); return; }
-    setSaveModalOpen(true);
+    if (currentGraphId) {
+      // Overwrite the existing saved diagram directly — no dialog needed
+      setLoading(true);
+      setSaveStatus('Saving…');
+      try {
+        const result = await domainsAPI.updateGraph(currentGraphId, graph);
+        if (result.success) {
+          setSaveStatus(`Saved: ${result.name}`);
+          loadSavedGraphs();
+          setTimeout(() => setSaveStatus(''), 3000);
+        } else {
+          setSaveStatus('Save failed');
+          setTimeout(() => setSaveStatus(''), 3000);
+        }
+      } catch (error) {
+        console.error('Save error:', error);
+        setSaveStatus('Save failed');
+        setTimeout(() => setSaveStatus(''), 3000);
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      // New unsaved diagram — ask for a name
+      setSaveModalOpen(true);
+    }
   };
 
   const handleSaveConfirm = async (name, description) => {
@@ -339,6 +324,9 @@ function WorkspacePage({ user, onLogout }) {
       const result = await domainsAPI.saveGraph(name, description, graph, selectedDomain);
       if (result.success) {
         setSaveStatus(`Saved: ${result.name}`);
+        setCurrentGraphId(result.graph_id);
+        setCurrentGraphName(result.name);
+        loadSavedGraphs();
         setTimeout(() => setSaveStatus(''), 3000);
       } else {
         setSaveStatus('Save failed');
@@ -388,6 +376,9 @@ function WorkspacePage({ user, onLogout }) {
           const importedGraph = JSON.parse(event.target.result);
           if (importedGraph.nodes && importedGraph.edges) {
             setGraph(importedGraph);
+            // Imported from file — treat as unsaved (no currentGraphId)
+            setCurrentGraphId(null);
+            setCurrentGraphName('');
             setSaveStatus('Imported');
             setTimeout(() => setSaveStatus(''), 3000);
           } else {
@@ -402,13 +393,38 @@ function WorkspacePage({ user, onLogout }) {
     input.click();
   };
 
-  const handleLoadSavedGraph = (graphRecord) => {
-    if (graphRecord.domain !== selectedDomain) {
-      handleDomainChange(graphRecord.domain);
+  const handleLoadGraphById = async (graphId) => {
+    try {
+      const result = await domainsAPI.loadGraph(graphId);
+      if (result.success) {
+        const rec = result.graph;
+        if (rec.domain !== selectedDomain) {
+          handleDomainChange(rec.domain);
+        }
+        setGraph(rec.graph_data);
+        setCurrentGraphId(rec.id);
+        setCurrentGraphName(rec.name);
+        setSaveStatus(`Loaded: ${rec.name}`);
+        setTimeout(() => setSaveStatus(''), 3000);
+      }
+    } catch (err) {
+      console.error('Failed to load graph:', err);
+      alert('Failed to load diagram.');
     }
-    setGraph(graphRecord.graph_data);
-    setSaveStatus(`Loaded: ${graphRecord.name}`);
-    setTimeout(() => setSaveStatus(''), 3000);
+  };
+
+  const handleDeleteGraph = async (graphId, name) => {
+    if (!window.confirm(`Delete "${name}"?`)) return;
+    try {
+      await domainsAPI.deleteGraph(graphId);
+      setSavedGraphs(prev => prev.filter(g => g.id !== graphId));
+      if (currentGraphId === graphId) {
+        setCurrentGraphId(null);
+        setCurrentGraphName('');
+      }
+    } catch {
+      alert('Failed to delete diagram.');
+    }
   };
 
   const domainIcons = {
@@ -449,41 +465,144 @@ function WorkspacePage({ user, onLogout }) {
       </header>
 
       <div className="workspace-container">
+        {/* ── File-explorer sidebar (VS Code style) ── */}
         <aside className="workspace-sidebar">
-          {domainInfo && (
-            <AlgorithmPanel
-              domainInfo={domainInfo}
-              onRunAlgorithm={handleRunAlgorithm}
-              loading={loading}
-            />
-          )}
+          <div className="explorer-header">EXPLORER</div>
+          <div className="explorer-section">
+            <button
+              className="explorer-section-title"
+              onClick={() => setExplorerOpen(o => !o)}
+              aria-expanded={explorerOpen}
+            >
+              <span className={`explorer-chevron ${explorerOpen ? 'open' : ''}`}>▸</span>
+              SAVED DIAGRAMS
+            </button>
+            {explorerOpen && (
+              <div className="explorer-files">
+                {savedGraphs.length === 0 && (
+                  <div className="explorer-empty">No saved diagrams</div>
+                )}
+                {savedGraphs.map(g => (
+                  <div
+                    key={g.id}
+                    className={`explorer-file${currentGraphId === g.id ? ' active' : ''}`}
+                    onClick={() => handleLoadGraphById(g.id)}
+                    title={`${g.name} · ${g.domain} · ${g.node_count}N ${g.edge_count}E`}
+                  >
+                    <FileIcon />
+                    <span className="explorer-file-name">{g.name}</span>
+                    <span className="explorer-file-domain">{domainIcons[g.domain] || g.domain}</span>
+                    <button
+                      className="explorer-file-delete"
+                      onClick={e => { e.stopPropagation(); handleDeleteGraph(g.id, g.name); }}
+                      title="Delete"
+                      aria-label={`Delete ${g.name}`}
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Algorithm results shown below the file list */}
           {algorithmResults && (
-            <ResultsPanel
-              results={algorithmResults}
-              domainName={selectedDomain}
-            />
+            <div className="explorer-results">
+              <div className="explorer-section-title explorer-section-title--static">
+                ANALYSIS RESULTS
+              </div>
+              <div className="explorer-results-body">
+                {Object.entries(algorithmResults).slice(0, 8).map(([k, v]) => (
+                  <div key={k} className="result-row">
+                    <span className="result-key">{k.replace(/_/g, ' ')}</span>
+                    <span className="result-val">
+                      {typeof v === 'object'
+                        ? (() => { const s = JSON.stringify(v); return s.length > 40 ? s.slice(0, 40) + '…' : s; })()
+                        : String(v)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
         </aside>
 
         <main className="workspace-main">
           <div className="workspace-toolbar">
+            {/* ── Layer tab buttons (replaced the old domain-badge/stats) ── */}
             <div className="toolbar-left">
-              {domainInfo && (
-                <span className="domain-badge">
-                  {domainIcons[selectedDomain]} {domainInfo?.display_name}
-                </span>
-              )}
-              <span className="graph-stats">
-                {graph.nodes.length}N · {graph.edges.length}E
-              </span>
+              {LAYERS.map(layer => (
+                <button
+                  key={layer.id}
+                  className={`layer-btn layer-btn-${layer.id}${activeLayer === layer.id ? ' active' : ''}`}
+                  onClick={() => setActiveLayer(layer.id)}
+                  title={`${layer.title} (Alt+${layer.shortcut})`}
+                >
+                  {layer.label}
+                </button>
+              ))}
               {saveStatus && <span className="save-status">{saveStatus}</span>}
             </div>
+
+            {/* ── Algorithm selector + Run (moved from sidebar) ── */}
+            <div className="toolbar-middle">
+              {domainInfo?.algorithms && domainInfo.algorithms.length > 0 && (
+                <>
+                  <select
+                    className="algo-select"
+                    value={selectedAlgorithm?.name || ''}
+                    onChange={e => {
+                      const algo = domainInfo.algorithms.find(a => a.name === e.target.value);
+                      setSelectedAlgorithm(algo || null);
+                      setAlgorithmParams(getDefaultAlgorithmParams(e.target.value));
+                    }}
+                    aria-label="Algorithm"
+                  >
+                    <option value="">Algorithm…</option>
+                    {domainInfo.algorithms.map(a => (
+                      <option key={a.name} value={a.name}>
+                        {a.name.replace(/_/g, ' ')}
+                      </option>
+                    ))}
+                  </select>
+
+                  {selectedAlgorithm && Object.entries(algorithmParams).map(([key, val]) => (
+                    <div key={key} className="algo-param">
+                      <label className="algo-param-label">{key.replace(/_/g, ' ')}</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={val}
+                        onChange={e => setAlgorithmParams(prev => ({
+                          ...prev,
+                          [key]: e.target.value === '' ? '' : (isNaN(parseFloat(e.target.value)) ? e.target.value : parseFloat(e.target.value)),
+                        }))}
+                        className="algo-param-input"
+                        aria-label={key}
+                      />
+                    </div>
+                  ))}
+
+                  <button
+                    onClick={() => selectedAlgorithm && handleRunAlgorithm(selectedAlgorithm.name, algorithmParams)}
+                    className="icon-btn btn-run-algo"
+                    disabled={loading || !selectedAlgorithm}
+                    title={selectedAlgorithm ? `Run ${selectedAlgorithm.name.replace(/_/g, ' ')}` : 'Select an algorithm first'}
+                  >
+                    {loading ? '⏳' : '▶'}
+                  </button>
+                </>
+              )}
+            </div>
+
+            {/* ── File action buttons ── */}
             <div className="toolbar-actions">
               <button
                 onClick={handleSaveGraph}
                 className="icon-btn icon-btn-save"
                 disabled={loading}
-                title="Save diagram"
+                title={currentGraphId ? `Save (overwrite "${currentGraphName}")` : 'Save as new diagram'}
               >
                 <SaveIcon />
               </button>
@@ -504,13 +623,6 @@ function WorkspacePage({ user, onLogout }) {
                 <ImportIcon />
               </button>
               <button
-                onClick={() => setSavedModalOpen(true)}
-                className="icon-btn icon-btn-folder"
-                title="Open saved diagrams"
-              >
-                <FolderIcon />
-              </button>
-              <button
                 onClick={handleClearGraph}
                 className="icon-btn icon-btn-danger"
                 title="Clear canvas"
@@ -526,6 +638,8 @@ function WorkspacePage({ user, onLogout }) {
               domainInfo={domainInfo}
               domainStyling={domainStyling}
               onGraphChange={setGraph}
+              activeLayer={activeLayer}
+              onLayerChange={setActiveLayer}
             />
           ) : (
             <div className="workspace-loading">
@@ -536,12 +650,6 @@ function WorkspacePage({ user, onLogout }) {
         </main>
       </div>
 
-      <SavedDiagramsModal
-        isOpen={savedModalOpen}
-        onClose={() => setSavedModalOpen(false)}
-        onLoad={handleLoadSavedGraph}
-        selectedDomain={selectedDomain}
-      />
       <SaveModal
         isOpen={saveModalOpen}
         onClose={() => setSaveModalOpen(false)}
@@ -552,4 +660,3 @@ function WorkspacePage({ user, onLogout }) {
 }
 
 export default WorkspacePage;
-

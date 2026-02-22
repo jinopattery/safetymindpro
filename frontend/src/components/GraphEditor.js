@@ -34,10 +34,9 @@ const LAYERS = [
   },
 ];
 
-function GraphEditor({ graph, domainInfo, domainStyling, onGraphChange }) {
+function GraphEditor({ graph, domainInfo, domainStyling, onGraphChange, activeLayer, onLayerChange }) {
   const [nodes, setNodes, onNodesChange] = useNodesState(graph.nodes || []);
   const [edges, setEdges, onEdgesChange] = useEdgesState(graph.edges || []);
-  const [activeLayer, setActiveLayer] = useState('form');
   const [selectedNodeType, setSelectedNodeType] = useState(null);
   const [selectedEdgeType, setSelectedEdgeType] = useState(null);
   const [nodeLabel, setNodeLabel] = useState('');
@@ -86,13 +85,13 @@ function GraphEditor({ graph, domainInfo, domainStyling, onGraphChange }) {
   useEffect(() => {
     const handler = (e) => {
       if (!e.altKey) return;
-      if (e.key === '1') { e.preventDefault(); setActiveLayer('form'); }
-      if (e.key === '2') { e.preventDefault(); setActiveLayer('function'); }
-      if (e.key === '3') { e.preventDefault(); setActiveLayer('failure'); }
+      if (e.key === '1') { e.preventDefault(); onLayerChange('form'); }
+      if (e.key === '2') { e.preventDefault(); onLayerChange('function'); }
+      if (e.key === '3') { e.preventDefault(); onLayerChange('failure'); }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, []);
+  }, [onLayerChange]);
 
   const getNodeStyle = (nodeType) => {
     if (!domainStyling?.node_styles) return {};
@@ -221,21 +220,6 @@ function GraphEditor({ graph, domainInfo, domainStyling, onGraphChange }) {
 
   return (
     <div className="graph-editor">
-      {/* Layer tabs */}
-      <div className="layer-tabs">
-        {LAYERS.map(layer => (
-          <button
-            key={layer.id}
-            className={`layer-tab ${activeLayer === layer.id ? 'active' : ''} layer-tab-${layer.id}`}
-            onClick={() => setActiveLayer(layer.id)}
-            title={`${layer.title} (Alt+${layer.shortcut})`}
-          >
-            <span className="layer-tab-label">{layer.label}</span>
-            <span className="layer-tab-count">{layerStats[layer.id] || 0}</span>
-          </button>
-        ))}
-      </div>
-
       {/* Compact add-node toolbar */}
       <div className="graph-toolbar">
         <select
