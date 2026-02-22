@@ -16,7 +16,7 @@ from backend.models import User
 # Configuration
 SECRET_KEY = "your-secret-key-change-in-production"
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+ACCESS_TOKEN_EXPIRE_MINUTES = 480  # 8 hours
 
 # Password hashing context with bcrypt
 # Note: bcrypt >=4.0.0 compatibility - explicitly set default rounds

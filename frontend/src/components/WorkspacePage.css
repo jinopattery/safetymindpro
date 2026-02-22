@@ -112,21 +112,8 @@
 
 /* ── Sidebar ─────────────────────────────────────────────────────── */
 .workspace-sidebar {
-  width: 200px;
+  width: 260px;
   background: #1e2228;
-  border-right: 1px solid #2d3139;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  flex-shrink: 0;
-  color: #cdd6f4;
-}
-
-/* ── Hierarchy sidebar ───────────────────────────────────────────── */
-.workspace-hierarchy {
-  width: 220px;
-  background: #1a1d23;
   border-right: 1px solid #2d3139;
   overflow-y: auto;
   display: flex;
@@ -217,6 +204,8 @@
 
 /* ── Explorer header ─────────────────────────────────────────────── */
 .explorer-header {
+  display: flex;
+  justify-content: space-between;
   padding: 10px 14px 6px;
   font-size: 0.68rem;
   font-weight: 700;
@@ -766,15 +755,13 @@
 
 /* ── Responsive ──────────────────────────────────────────────────── */
 @media (max-width: 900px) {
-  .workspace-sidebar { width: 160px; }
-  .workspace-hierarchy { width: 180px; }
+  .workspace-sidebar { width: 200px; }
   .domain-tab-text { display: none; }
   .algo-select { min-width: 110px; }
 }
 
 @media (max-width: 640px) {
   .workspace-sidebar { display: none; }
-  .workspace-hierarchy { display: none; }
   .workspace-header-center { display: none; }
 }
 
