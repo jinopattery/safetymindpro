@@ -230,39 +230,36 @@ function HierarchyExplorer({ graph, onNodeSelect, selectedNodeId }) {
   const isEmpty = tree.rootForms.length === 0 && tree.orphanFunctions.length === 0 && tree.orphanFailures.length === 0;
 
   return (
-    <aside className="workspace-hierarchy">
-      <div className="explorer-header">HIERARCHY</div>
-      <div className="explorer-section">
-        <button
-          className="explorer-section-title"
-          onClick={() => setPanelOpen(o => !o)}
-          aria-expanded={panelOpen}
-        >
-          <span className={`explorer-chevron ${panelOpen ? 'open' : ''}`}>▸</span>
-          FORM · FUNCTION · FAILURE
-        </button>
-        {panelOpen && (
-          <div className="htree-root">
-            {isEmpty && (
-              <div className="explorer-empty">No nodes yet.<br/>Add Form nodes and connect them to Functions and Failures.</div>
-            )}
-            {tree.rootForms.map(f => renderForm(f.id, 0))}
-            {tree.orphanFunctions.length > 0 && (
-              <div className="htree-orphan-section">
-                <div className="htree-orphan-label">Unlinked Functions</div>
-                {renderFunctions(tree.orphanFunctions.map(n => n.id), 0)}
-              </div>
-            )}
-            {tree.orphanFailures.length > 0 && (
-              <div className="htree-orphan-section">
-                <div className="htree-orphan-label">Unlinked Failures</div>
-                {renderFailures(tree.orphanFailures.map(n => n.id), 0)}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    </aside>
+    <div className="explorer-section">
+      <button
+        className="explorer-section-title"
+        onClick={() => setPanelOpen(o => !o)}
+        aria-expanded={panelOpen}
+      >
+        <span className={`explorer-chevron ${panelOpen ? 'open' : ''}`}>▸</span>
+        FORM · FUNCTION · FAILURE
+      </button>
+      {panelOpen && (
+        <div className="htree-root">
+          {isEmpty && (
+            <div className="explorer-empty">No nodes yet.<br/>Add Form nodes and connect them to Functions and Failures.</div>
+          )}
+          {tree.rootForms.map(f => renderForm(f.id, 0))}
+          {tree.orphanFunctions.length > 0 && (
+            <div className="htree-orphan-section">
+              <div className="htree-orphan-label">Unlinked Functions</div>
+              {renderFunctions(tree.orphanFunctions.map(n => n.id), 0)}
+            </div>
+          )}
+          {tree.orphanFailures.length > 0 && (
+            <div className="htree-orphan-section">
+              <div className="htree-orphan-label">Unlinked Failures</div>
+              {renderFailures(tree.orphanFailures.map(n => n.id), 0)}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -634,7 +631,10 @@ function WorkspacePage({ user, onLogout }) {
       <div className="workspace-container">
         {/* ── File-explorer sidebar (VS Code style) ── */}
         <aside className="workspace-sidebar">
-          <div className="explorer-header">EXPLORER</div>
+          <div className="explorer-header">
+            <span>EXPLORER</span>
+            <span>HIERARCHY</span>
+          </div>
           <div className="explorer-section">
             <button
               className="explorer-section-title"
@@ -693,10 +693,10 @@ function WorkspacePage({ user, onLogout }) {
               </div>
             </div>
           )}
-        </aside>
 
-        {/* ── Hierarchy explorer sidebar ── */}
-        <HierarchyExplorer graph={graph} />
+          {/* ── Hierarchy explorer section ── */}
+          <HierarchyExplorer graph={graph} />
+        </aside>
 
         <main className="workspace-main">
           <div className="workspace-toolbar">
