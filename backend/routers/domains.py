@@ -9,6 +9,7 @@ from fastapi import APIRouter, HTTPException, Query, Depends
 from typing import List, Dict, Any, Optional
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
+from datetime import datetime
 
 from backend.domains.registry import registry
 from backend.core.graph import Graph, NodeData, EdgeData
@@ -646,6 +647,51 @@ async def load_graph(
             "created_at": graph.created_at.isoformat() if graph.created_at else None,
             "updated_at": graph.updated_at.isoformat() if graph.updated_at else None,
         },
+    }
+
+
+class GraphUpdateRequest(BaseModel):
+    """Request to update an existing graph"""
+    graph_data: Dict[str, Any]
+    name: Optional[str] = None
+
+
+@router.put("/update-graph/{graph_id}")
+async def update_graph(
+    graph_id: int,
+    request: GraphUpdateRequest,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user)
+):
+    """
+    Update an existing saved graph in place (overwrite).
+
+    Args:
+        graph_id: The graph's database ID
+        request: Updated graph data (and optional new name)
+
+    Returns:
+        Success status and updated graph metadata
+    """
+    graph = db.query(GraphModel).filter(
+        GraphModel.id == graph_id,
+        GraphModel.owner_id == current_user.id
+    ).first()
+    if not graph:
+        raise HTTPException(status_code=404, detail="Graph not found")
+
+    graph.graph_data = request.graph_data
+    if request.name:
+        graph.name = request.name
+    graph.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(graph)
+
+    return {
+        "success": True,
+        "graph_id": graph.id,
+        "name": graph.name,
+        "message": "Graph updated successfully"
     }
 
 
