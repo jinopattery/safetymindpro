@@ -33,7 +33,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from backend.database import engine, Base
+from backend.database import engine, Base, init_db
 
 # Import only working routers
 from backend.routers import domains, auth, diagrams, fmea, privacy
@@ -49,7 +49,7 @@ async def lifespan(app: FastAPI):
     """
     # Startup: Create database tables
     try:
-        Base.metadata.create_all(bind=engine)
+        init_db()
         logger.info("Database tables created successfully")
     except Exception as e:
         logger.error(f"Error creating database tables: {e}")
