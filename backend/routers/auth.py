@@ -350,7 +350,9 @@ async def resend_verification(body: ResendVerificationRequest, db: Session = Dep
     user.email_verification_sent_at = datetime.utcnow()
     db.commit()
 
-    send_verification_email(user.email, verification_token)
+    verification_link = send_verification_email(user.email, verification_token)
+    if verification_link:
+        return {**generic, "verification_link": verification_link}
     return generic
 
 

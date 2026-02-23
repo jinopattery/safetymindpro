@@ -12,6 +12,7 @@ function LoginForm({ onLogin }) {
   const [loading, setLoading] = useState(false);
   const [unverifiedEmail, setUnverifiedEmail] = useState('');
   const [resendStatus, setResendStatus] = useState('');
+  const [resendVerificationLink, setResendVerificationLink] = useState(null);
 
   const handleChange = (e) => {
     setFormData({
@@ -21,6 +22,7 @@ function LoginForm({ onLogin }) {
     setError('');
     setUnverifiedEmail('');
     setResendStatus('');
+    setResendVerificationLink(null);
   };
 
   const handleSubmit = async (e) => {
@@ -29,6 +31,7 @@ function LoginForm({ onLogin }) {
     setError('');
     setUnverifiedEmail('');
     setResendStatus('');
+    setResendVerificationLink(null);
 
     const result = await onLogin(formData);
     
@@ -48,7 +51,10 @@ function LoginForm({ onLogin }) {
     try {
       // The backend resolves both username and email, so passing the username
       // entered in the login form is sufficient.
-      await authAPI.resendVerification(unverifiedEmail);
+      const data = await authAPI.resendVerification(unverifiedEmail);
+      if (data.verification_link) {
+        setResendVerificationLink(data.verification_link);
+      }
       setResendStatus('sent');
     } catch {
       setResendStatus('error');
@@ -87,7 +93,11 @@ function LoginForm({ onLogin }) {
                 </button>
               )}
               {resendStatus === 'sent' && (
-                <span className="resend-ok"> ✓ Email sent – please check your inbox.</span>
+                <span className="resend-ok"> ✓ {resendVerificationLink && /^https?:\/\//.test(resendVerificationLink) ? (
+                  <>Verification link ready –{' '}
+                    <a href={resendVerificationLink} className="btn-link" target="_blank" rel="noopener noreferrer">click here to verify your email</a>.
+                  </>
+                ) : 'Email sent – please check your inbox.'}</span>
               )}
               {resendStatus === 'error' && (
                 <span className="resend-error"> Could not send email, please try again later.</span>
