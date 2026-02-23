@@ -1,0 +1,153 @@
+/* My Privacy Data panel */
+
+.privacy-data {
+  background: #fff;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  padding: 24px;
+  margin-top: 24px;
+}
+
+.privacy-data h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 8px;
+}
+
+.privacy-data__intro {
+  font-size: 0.83rem;
+  color: #64748b;
+  margin-bottom: 16px;
+}
+
+.privacy-data__error {
+  background: #fef2f2;
+  color: #b91c1c;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border-left: 3px solid #ef4444;
+  font-size: 0.82rem;
+  margin-bottom: 12px;
+}
+
+.privacy-data__actions {
+  margin-bottom: 16px;
+}
+
+.btn-secondary {
+  background: #f1f5f9;
+  color: #1e293b;
+  border: 1px solid #e2e8f0;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 0.87rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: #e2e8f0;
+}
+
+.btn-secondary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.btn-danger {
+  background: #dc2626;
+  color: #fff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 0.87rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: #b91c1c;
+}
+
+.btn-danger:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.privacy-data__result {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.privacy-data__summary p {
+  font-size: 0.85rem;
+  color: #374151;
+  margin: 4px 0;
+}
+
+.privacy-data__log {
+  margin-top: 16px;
+}
+
+.privacy-data__log h4 {
+  font-size: 0.87rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 8px;
+}
+
+.privacy-data__log table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.privacy-data__log th,
+.privacy-data__log td {
+  padding: 6px 8px;
+  border: 1px solid #e2e8f0;
+  text-align: left;
+}
+
+.privacy-data__log th {
+  background: #f1f5f9;
+  font-weight: 600;
+}
+
+.privacy-data__danger {
+  border-top: 1px solid #fee2e2;
+  margin-top: 20px;
+  padding-top: 16px;
+}
+
+.privacy-data__danger h4 {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #b91c1c;
+  margin: 0 0 6px;
+}
+
+.privacy-data__danger p {
+  font-size: 0.82rem;
+  color: #64748b;
+  margin: 0 0 12px;
+}
+
+.privacy-data__confirm {
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  border-radius: 6px;
+  padding: 12px;
+}
+
+.privacy-data__confirm p {
+  margin: 0 0 10px;
+  font-size: 0.85rem;
+  color: #991b1b;
+}

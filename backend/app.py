@@ -36,7 +36,7 @@ from fastapi.responses import JSONResponse
 from backend.database import engine, Base
 
 # Import only working routers
-from backend.routers import domains, auth, diagrams, fmea
+from backend.routers import domains, auth, diagrams, fmea, privacy
 from backend.routers.domains import router_v2  # Import v2 router
 
 logger = logging.getLogger(__name__)
@@ -102,6 +102,7 @@ app.include_router(domains.router, tags=["Domains"])
 app.include_router(router_v2, tags=["Domains V2 - Universal Architecture"])
 app.include_router(diagrams.router, tags=["Diagrams"])
 app.include_router(fmea.router, tags=["FMEA"])
+app.include_router(privacy.router, prefix="/api/v1")
 
 # Root endpoint
 @app.get("/")

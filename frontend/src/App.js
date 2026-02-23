@@ -10,6 +10,11 @@ import LoginForm from './components/Auth/LoginForm';
 import SignupForm from './components/Auth/SignupForm';
 import Dashboard from './components/Dashboard';
 import WorkspacePage from './components/WorkspacePage';
+import CookieConsent from './components/CookieConsent';
+
+// Pages
+import EmailVerification from './pages/EmailVerification';
+import PrivacyPolicy from './pages/PrivacyPolicy';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(authAPI.isAuthenticated());
@@ -45,10 +50,8 @@ function App() {
       return { success: true };
     } catch (error) {
       console.error('Login failed:', error);
-      return { 
-        success: false, 
-        error: error.response?.data?.detail || 'Login failed' 
-      };
+      const detail = error.response?.data?.detail || 'Login failed';
+      return { success: false, error: detail };
     }
   };
 
@@ -56,8 +59,9 @@ function App() {
     try {
       const data = await authAPI.signup(userData);
       setUser(data.user);
-      setIsAuthenticated(true);
-      return { success: true };
+      // After signup keep user on a "check your email" state – do not auto-login
+      setIsAuthenticated(false);
+      return { success: true, verificationLink: data.verification_link || null };
     } catch (error) {
       console.error('Signup failed:', error);
       return { 
@@ -85,6 +89,7 @@ function App() {
   return (
     <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <div className="App">
+        <CookieConsent />
         <Routes>
           {/* Public routes */}
           <Route 
@@ -103,6 +108,8 @@ function App() {
               <SignupForm onSignup={handleSignup} />
             } 
           />
+          <Route path="/verify-email" element={<EmailVerification />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
 
           {/* Protected routes */}
           <Route 

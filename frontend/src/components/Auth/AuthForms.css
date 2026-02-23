@@ -144,3 +144,98 @@
 .auth-footer a:hover {
   text-decoration: underline;
 }
+
+/* GDPR consent checkbox */
+.consent-group {
+  margin-top: 4px;
+}
+
+.consent-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 0.82rem;
+  color: #374151;
+  font-weight: 400;
+  cursor: pointer;
+}
+
+.consent-label input[type="checkbox"] {
+  width: auto;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.consent-label a {
+  color: #6366f1;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.consent-label a:hover {
+  text-decoration: underline;
+}
+
+.consent-note {
+  font-size: 0.78rem;
+  color: #64748b;
+  margin: 8px 0 12px;
+  line-height: 1.5;
+}
+
+/* Email verification info banner */
+.info-message {
+  background: #eff6ff;
+  color: #1d4ed8;
+  padding: 10px 12px;
+  border-radius: 6px;
+  margin-bottom: 14px;
+  border-left: 3px solid #3b82f6;
+  font-size: 0.82rem;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.btn-link {
+  background: none;
+  border: none;
+  color: #6366f1;
+  font-weight: 600;
+  font-size: 0.82rem;
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
+  text-decoration: underline;
+}
+
+.btn-link:disabled {
+  color: #94a3b8;
+  cursor: not-allowed;
+}
+
+.resend-ok {
+  color: #15803d;
+  font-weight: 600;
+}
+
+.resend-error {
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+/* Post-signup success screen – in-app verification (no SMTP mode) */
+.info-message--success {
+  border-color: #22c55e;
+  background: #f0fdf4;
+  color: #15803d;
+}
+
+.btn-verify {
+  text-align: center;
+  text-decoration: none;
+  display: block;
+  padding: 10px 20px;
+  margin-top: 12px;
+}
+

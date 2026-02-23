@@ -47,6 +47,18 @@ export const authAPI = {
     return response.data;
   },
 
+  // Verify email address with token
+  verifyEmail: async (token) => {
+    const response = await axios.post(`${API_BASE}/auth/verify-email`, { token });
+    return response.data;
+  },
+
+  // Resend verification email
+  resendVerification: async (email) => {
+    const response = await axios.post(`${API_BASE}/auth/resend-verification`, { email });
+    return response.data;
+  },
+
   // Get current user
   me: async () => {
     const response = await axios.get(`${API_BASE}/auth/me`);

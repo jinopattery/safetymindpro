@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { domainsAPI } from '../api/domains';
+import MyPrivacyData from './MyPrivacyData';
 import './Dashboard.css';
 
 const LogoutIcon = () => (
@@ -24,6 +25,7 @@ const OpenIcon = () => (
 function Dashboard({ user, onLogout }) {
   const [domains, setDomains] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [activeView, setActiveView] = useState('workspaces'); // 'workspaces' | 'privacy'
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -70,7 +72,7 @@ function Dashboard({ user, onLogout }) {
               <button
                 key={domain.name}
                 className="dashboard-sidebar-item"
-                onClick={() => navigate(`/workspace/${domain.name}`)}
+                onClick={() => { setActiveView('workspaces'); navigate(`/workspace/${domain.name}`); }}
                 title={domain.description}
               >
                 <span className="dashboard-sidebar-icon">{domainIcons[domain.name] || '📊'}</span>
@@ -78,39 +80,58 @@ function Dashboard({ user, onLogout }) {
               </button>
             ))}
           </div>
+
+          <div className="dashboard-sidebar-section">
+            <div className="dashboard-sidebar-title">ACCOUNT</div>
+            <button
+              className={`dashboard-sidebar-item${activeView === 'privacy' ? ' active' : ''}`}
+              onClick={() => setActiveView('privacy')}
+            >
+              <span className="dashboard-sidebar-icon">🔒</span>
+              <span className="dashboard-sidebar-label">My Privacy Data</span>
+            </button>
+          </div>
         </aside>
 
         <main className="dashboard-main">
-          <div className="dashboard-welcome">
-            <h2>Select a Domain</h2>
-            <p>Choose a workspace from the sidebar or the cards below.</p>
-          </div>
+          {activeView === 'workspaces' && (
+            <>
+              <div className="dashboard-welcome">
+                <h2>Select a Domain</h2>
+                <p>Choose a workspace from the sidebar or the cards below.</p>
+              </div>
 
-          {loading ? (
-            <div className="dashboard-loading">
-              <div className="dashboard-spinner"></div>
-              <p>Loading domains…</p>
-            </div>
-          ) : (
-            <div className="dashboard-domains-grid">
-              {domains.map((domain) => (
-                <div
-                  key={domain.name}
-                  className="dashboard-domain-card"
-                  onClick={() => navigate(`/workspace/${domain.name}`)}
-                >
-                  <div className="dashboard-domain-icon">{domainIcons[domain.name] || '📊'}</div>
-                  <div className="dashboard-domain-info">
-                    <h3>{domain.display_name}</h3>
-                    <div className="dashboard-domain-stats">
-                      <span>{domain.node_types.length} node types</span>
-                      <span>{domain.algorithms.length} algorithms</span>
-                    </div>
-                  </div>
-                  <div className="dashboard-domain-arrow"><OpenIcon /></div>
+              {loading ? (
+                <div className="dashboard-loading">
+                  <div className="dashboard-spinner"></div>
+                  <p>Loading domains…</p>
                 </div>
-              ))}
-            </div>
+              ) : (
+                <div className="dashboard-domains-grid">
+                  {domains.map((domain) => (
+                    <div
+                      key={domain.name}
+                      className="dashboard-domain-card"
+                      onClick={() => navigate(`/workspace/${domain.name}`)}
+                    >
+                      <div className="dashboard-domain-icon">{domainIcons[domain.name] || '📊'}</div>
+                      <div className="dashboard-domain-info">
+                        <h3>{domain.display_name}</h3>
+                        <div className="dashboard-domain-stats">
+                          <span>{domain.node_types.length} node types</span>
+                          <span>{domain.algorithms.length} algorithms</span>
+                        </div>
+                      </div>
+                      <div className="dashboard-domain-arrow"><OpenIcon /></div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+
+          {activeView === 'privacy' && (
+            <MyPrivacyData onAccountDeleted={onLogout} />
           )}
         </main>
       </div>
@@ -119,3 +140,4 @@ function Dashboard({ user, onLogout }) {
 }
 
 export default Dashboard;
+

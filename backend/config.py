@@ -32,6 +32,18 @@ class Settings(BaseSettings):
     # Logging
     log_level: str = "INFO"
     
+    # Email Verification
+    email_verification_required: bool = True
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_from: str = ""
+    app_base_url: str = "http://localhost:3000"
+
+    # GDPR / Privacy
+    privacy_policy_version: str = "1.0"
+
     class Config:
         env_file = ".env"
         case_sensitive = False

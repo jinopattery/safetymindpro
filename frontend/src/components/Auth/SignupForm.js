@@ -8,15 +8,22 @@ function SignupForm({ onSignup }) {
     username: '',
     password: '',
     confirmPassword: '',
-    full_name: ''
+    full_name: '',
+    gdpr_consent: false,
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  // After successful signup, one of two modes:
+  //   verificationLink – the /verify-email URL returned by the backend (no SMTP)
+  //   emailSent        – true when an email was dispatched via SMTP
+  const [verificationLink, setVerificationLink] = useState(null);
+  const [emailSent, setEmailSent] = useState(false);
 
   const handleChange = (e) => {
+    const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [e.target.name]: value,
     });
     setError('');
   };
@@ -26,23 +33,23 @@ function SignupForm({ onSignup }) {
     setLoading(true);
     setError('');
 
-    // Validate passwords match
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
       setLoading(false);
       return;
     }
-
-    // Validate minimum password length
     if (formData.password.length < 6) {
       setError('Password must be at least 6 characters');
       setLoading(false);
       return;
     }
-
-    // Validate maximum password length (bcrypt limitation)
     if (formData.password.length > 72) {
       setError('Password cannot be longer than 72 characters');
+      setLoading(false);
+      return;
+    }
+    if (!formData.gdpr_consent) {
+      setError('You must accept the Privacy Policy and Terms of Use to continue.');
       setLoading(false);
       return;
     }
@@ -51,20 +58,71 @@ function SignupForm({ onSignup }) {
       email: formData.email,
       username: formData.username,
       password: formData.password,
-      full_name: formData.full_name
+      full_name: formData.full_name,
+      gdpr_consent: formData.gdpr_consent,
     });
-    
-    if (!result.success) {
-      // Display detailed error from backend if available
-      if (result.error) {
-        setError(result.error);
+
+    if (result.success) {
+      if (result.verificationLink) {
+        setVerificationLink(result.verificationLink);
       } else {
-        setError('Signup failed. Please try again or contact support if the problem persists.');
+        setEmailSent(true);
       }
+    } else {
+      setError(result.error || 'Signup failed. Please try again or contact support.');
       setLoading(false);
     }
   };
 
+  // ── Post-signup success screen ─────────────────────────────────────────────
+  if (verificationLink || emailSent) {
+    return (
+      <div className="auth-container">
+        <div className="auth-card">
+          <div className="auth-header">
+            <h1>SafetyMindPro</h1>
+            <p>Graph Analysis Platform</p>
+          </div>
+          <div className="auth-form">
+            <h2>Account Created ✅</h2>
+
+            {verificationLink ? (
+              // No SMTP configured – show the link directly so no mail server is needed
+              <>
+                <div className="info-message info-message--success">
+                  Your account has been created. Click the button below to verify your
+                  email address and activate your account.
+                </div>
+                <a
+                  href={verificationLink}
+                  className="btn btn-primary btn-block btn-verify"
+                >
+                  ✉️ Verify Email Address
+                </a>
+                <p className="consent-note" style={{ marginTop: '12px' }}>
+                  No email server is required — click the button above to verify instantly.
+                </p>
+              </>
+            ) : (
+              // SMTP configured – email was sent
+              <>
+                <div className="info-message info-message--success">
+                  📧 A verification email has been sent to <strong>{formData.email}</strong>.
+                  Please check your inbox and click the link to activate your account.
+                </div>
+                <p className="consent-note">
+                  Didn't receive it? Check your spam folder or{' '}
+                  <Link to="/login">log in</Link> to resend.
+                </p>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Signup form ────────────────────────────────────────────────────────────
   return (
     <div className="auth-container">
       <div className="auth-card">
@@ -75,7 +133,7 @@ function SignupForm({ onSignup }) {
 
         <form onSubmit={handleSubmit} className="auth-form">
           <h2>Create Account</h2>
-          
+
           {error && (
             <div className="error-message">
               ⚠️ {error}
@@ -149,8 +207,33 @@ function SignupForm({ onSignup }) {
             />
           </div>
 
-          <button 
-            type="submit" 
+          {/* GDPR consent checkbox */}
+          <div className="form-group consent-group">
+            <label className="consent-label">
+              <input
+                type="checkbox"
+                name="gdpr_consent"
+                checked={formData.gdpr_consent}
+                onChange={handleChange}
+                required
+              />
+              <span>
+                I have read and accept the{' '}
+                <Link to="/privacy-policy" target="_blank" rel="noopener noreferrer">
+                  Privacy Policy
+                </Link>{' '}
+                and agree to the processing of my data as described therein. *
+              </span>
+            </label>
+          </div>
+
+          <p className="consent-note">
+            After registration you will need to verify your email address before
+            logging in.
+          </p>
+
+          <button
+            type="submit"
             className="btn btn-primary btn-block"
             disabled={loading}
           >
