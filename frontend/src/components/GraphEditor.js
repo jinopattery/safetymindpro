@@ -1,43 +1,13 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
-import ReactFlow, {
-  MiniMap,
-  Controls,
-  Background,
+import React, { useState, useRef, useEffect } from 'react';
+import {
   useNodesState,
   useEdgesState,
-  addEdge,
   MarkerType,
-  Panel,
-  Handle,
-  Position,
-  useReactFlow,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import './GraphEditor.css';
 
-// Layer definitions
-const LAYERS = [
-  {
-    id: 'form',
-    label: 'Form',
-    title: 'Physical / Logical Structure',
-    shortcut: '1',
-  },
-  {
-    id: 'function',
-    label: 'Function',
-    title: 'Behavioral Structure',
-    shortcut: '2',
-  },
-  {
-    id: 'failure',
-    label: 'Failure',
-    title: 'Risk Structure',
-    shortcut: '3',
-  },
-];
 
-// Strict hierarchy connection rules: [sourceLayer, targetLayer] → edgeType
 // Form→Form (child), Form→Function (performs), Form→Failure (has_failure),
 // Function→Function (child), Failure→Failure (child)
 const HIERARCHY_RULES = [
@@ -48,69 +18,12 @@ const HIERARCHY_RULES = [
   { src: 'failure',  tgt: 'failure',  edgeType: 'failure_propagation', hint: 'Failure→Failure (child)' },
 ];
 
-const HIERARCHY_ALLOWED_SUMMARY = HIERARCHY_RULES.map(r => r.hint).join(', ');
 
 const HIERARCHY_HINTS_BY_LAYER = {
   form:     HIERARCHY_RULES.filter(r => r.src === 'form').map(r => r.hint).join(' · '),
   function: ['Function→Function (child)', 'To link: draw from a Form node'].join(' · '),
   failure:  ['Failure→Failure (child)',   'To link: draw from a Form node'].join(' · '),
 };
-
-// ── Editable node component ────────────────────────────────────────────────
-function EditableNode({ id, data, isConnectable, targetPosition = Position.Top, sourcePosition = Position.Bottom }) {
-  const [editing, setEditing] = useState(false);
-  const [editVal, setEditVal] = useState('');
-  const { setNodes } = useReactFlow();
-  const inputRef = useRef(null);
-
-  const startEdit = useCallback((e) => {
-    e.stopPropagation();
-    setEditVal(data.label);
-    setEditing(true);
-    setTimeout(() => inputRef.current?.select(), 0);
-  }, [data.label]);
-
-  const commitEdit = useCallback(() => {
-    if (editVal.trim()) {
-      setNodes(nds => nds.map(n =>
-        n.id === id ? { ...n, data: { ...n.data, label: editVal.trim() } } : n
-      ));
-    }
-    setEditing(false);
-  }, [editVal, id, setNodes]);
-
-  return (
-    <>
-      <Handle type="target" position={targetPosition} isConnectable={isConnectable} />
-      <div
-        className="editable-node-content"
-        onDoubleClick={startEdit}
-        title={editing ? undefined : 'Double-click to rename'}
-      >
-        {editing ? (
-          <input
-            ref={inputRef}
-            className="editable-node-input"
-            value={editVal}
-            onChange={e => setEditVal(e.target.value)}
-            onBlur={commitEdit}
-            onKeyDown={e => {
-              if (e.key === 'Enter') { e.preventDefault(); commitEdit(); }
-              if (e.key === 'Escape') setEditing(false);
-            }}
-            onClick={e => e.stopPropagation()}
-          />
-        ) : (
-          <span>{data.label}</span>
-        )}
-      </div>
-      <Handle type="source" position={sourcePosition} isConnectable={isConnectable} />
-    </>
-  );
-}
-
-// Define outside component for stable reference (required by ReactFlow)
-const nodeTypes = { default: EditableNode };
 
 // ── Collapsible Horizontal Tree view (used for Function and Failure layers) ──
 
@@ -291,163 +204,270 @@ function CollapsibleHorizontalTree({ nodes, edges, layer, childEdgeType, accentC
   );
 }
 
-// ── All-Layers Grouped View (ReactFlow with forms as group containers) ──
+// ── Collapsible Form Grid (Form layer view) ───────────────────────────────
 
-const CHILD_W = 140;
-const CHILD_H = 36;
-const GROUP_PAD = 14;
-const GROUP_HEADER = 32;
-const CHILD_GAP = 10;
-const GROUP_H_GAP = 24;
-const GROUP_V_GAP = 20;
-const COLS_PER_GROUP = 3;
+function CollapsibleFormGrid({ nodes, edges, domainStyling }) {
+  const [collapsed, setCollapsed] = React.useState({});
 
-function computeGroupedNodes(nodes, edges) {
-  const nodeMap = {};
-  nodes.forEach(n => { nodeMap[n.id] = n; });
+  const formNodes = React.useMemo(
+    () => nodes.filter(n => n.data?.layer === 'form'),
+    [nodes]
+  );
 
-  const formFuncs = {};   // formId → [funcIds]
-  const formFails = {};   // formId → [failIds]
-  const formKids  = {};   // formId → [childFormIds]
-  const isChildForm = new Set();
-
-  edges.forEach(e => {
-    const t = e.data?.edgeType;
-    if (t === 'performs_function') { (formFuncs[e.source] = formFuncs[e.source] || []).push(e.target); }
-    if (t === 'has_failure')       { (formFails[e.source] = formFails[e.source] || []).push(e.target); }
-    if (t === 'form_hierarchy')    { (formKids[e.source]  = formKids[e.source]  || []).push(e.target);  isChildForm.add(e.target); }
-  });
-
-  const rootForms = nodes.filter(n => n.data?.layer === 'form' && !isChildForm.has(n.id));
-
-  const result = [];
-  const placedIds = new Set();
-  let curY = 0;
-
-  function placeForm(formId, x) {
-    const n = nodeMap[formId];
-    if (!n) return 0;
-    placedIds.add(formId);
-
-    const funcs = formFuncs[formId] || [];
-    const fails = formFails[formId] || [];
-    const items = [...funcs, ...fails];
-    const itemCount = items.length;
-    const cols = Math.min(Math.max(itemCount, 1), COLS_PER_GROUP);
-    const rows = itemCount > 0 ? Math.ceil(itemCount / cols) : 0;
-    const gw = Math.max(160, cols * (CHILD_W + CHILD_GAP) - CHILD_GAP + GROUP_PAD * 2);
-    const gh = GROUP_HEADER + (rows > 0 ? rows * (CHILD_H + CHILD_GAP) - CHILD_GAP + GROUP_PAD : GROUP_PAD);
-
-    result.push({
-      ...n,
-      type: 'group',
-      position: { x, y: curY },
-      style: {
-        width: gw,
-        height: gh,
-        background: 'rgba(241,245,249,0.9)',
-        border: '1.5px dashed #94a3b8',
-        borderRadius: 8,
-      },
-      data: { ...n.data, isGroupParent: true },
+  const { childMap, isChildForm } = React.useMemo(() => {
+    const cm = {};
+    const icf = new Set();
+    edges.forEach(e => {
+      if (e.data?.edgeType === 'form_hierarchy') {
+        if (!cm[e.source]) cm[e.source] = [];
+        cm[e.source].push(e.target);
+        icf.add(e.target);
+      }
     });
+    return { childMap: cm, isChildForm: icf };
+  }, [edges]);
 
-    items.forEach((itemId, idx) => {
-      const item = nodeMap[itemId];
-      if (!item) return;
-      placedIds.add(itemId);
-      const col = idx % cols;
-      const row = Math.floor(idx / cols);
-      result.push({
-        ...item,
-        parentId: formId,
-        extent: 'parent',
-        position: {
-          x: GROUP_PAD + col * (CHILD_W + CHILD_GAP),
-          y: GROUP_HEADER + row * (CHILD_H + CHILD_GAP),
-        },
-        style: { ...item.style, width: CHILD_W },
-        draggable: false,
-      });
-    });
+  const rootForms = React.useMemo(
+    () => formNodes.filter(n => !isChildForm.has(n.id)),
+    [formNodes, isChildForm]
+  );
 
-    const childForms = formKids[formId] || [];
-    let childX = x + gw + GROUP_H_GAP;
-    const startY = curY;
-    if (childForms.length > 0) {
-      curY += gh + GROUP_V_GAP;
-      childForms.forEach(cfId => {
-        placeForm(cfId, childX);
-        curY += GROUP_V_GAP;
-      });
-      curY = Math.max(curY, startY + gh);
-    } else {
-      curY += gh + GROUP_V_GAP;
-    }
-  }
-
-  rootForms.forEach(f => { placeForm(f.id, 0); });
-
-  // orphan nodes not placed (functions/failures not linked to any form)
-  nodes.forEach(n => {
-    if (!placedIds.has(n.id)) {
-      result.push({ ...n });
-    }
-  });
-
-  return result;
-}
-
-function AllLayersGroupedView({ nodes, edges, domainStyling, onGraphChange, onNodesChange, onEdgesChange, onConnect, onNodesDelete }) {
-  const groupedNodes = React.useMemo(() => computeGroupedNodes(nodes, edges), [nodes, edges]);
-
-  const layerStats = React.useMemo(() => {
-    const s = { form: 0, function: 0, failure: 0 };
-    nodes.forEach(n => { const l = n.data?.layer; if (l && s[l] !== undefined) s[l]++; });
-    return s;
+  const nodeMap = React.useMemo(() => {
+    const m = {};
+    nodes.forEach(n => { m[n.id] = n; });
+    return m;
   }, [nodes]);
 
-  return (
-    <div className="graph-canvas graph-canvas--all">
-      <ReactFlow
-        nodes={groupedNodes}
-        edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onConnect={onConnect}
-        onNodesDelete={onNodesDelete}
-        nodeTypes={nodeTypes}
-        fitView
-        attributionPosition="bottom-left"
-        deleteKeyCode="Delete"
+  const toggle = React.useCallback(
+    id => setCollapsed(prev => ({ ...prev, [id]: !prev[id] })),
+    []
+  );
+
+  const accentColor = domainStyling?.theme?.formLayerColor || '#3b82f6';
+
+  const renderForm = (formId, depth) => {
+    const form = nodeMap[formId];
+    if (!form) return null;
+    const children = childMap[formId] || [];
+    const isCol = collapsed[formId];
+    return (
+      <div key={formId}
+        className={`cfgrid-card cfgrid-card-d${Math.min(depth, 3)}`}
+        style={{ borderLeftColor: accentColor }}
       >
-        <Controls />
-        <MiniMap
-          nodeColor={node => {
-            const nt = node.data?.nodeType;
-            return domainStyling?.node_styles?.[nt]?.backgroundColor || '#6366f1';
-          }}
-          style={{ background: '#f8fafc' }}
-        />
-        <Background color="#e2e8f0" gap={20} size={1} />
-        <Panel position="top-right" className="layer-stats-panel">
-          {LAYERS.map(l => (
-            <div key={l.id} className={`layer-stat layer-stat-${l.id}`}
-              style={{ borderLeftColor: domainStyling?.theme?.[`${l.id}LayerColor`] || '#6366f1' }}>
-              <span className="ls-label">{l.label}</span>
-              <span className="ls-count">{layerStats[l.id]}</span>
-            </div>
-          ))}
-        </Panel>
-      </ReactFlow>
+        <div className="cfgrid-card-header">
+          <span className="cfgrid-card-label" title={form.data?.label}>{form.data?.label}</span>
+          {children.length > 0 && (
+            <button
+              className="cfgrid-toggle-btn"
+              onClick={() => toggle(formId)}
+              title={isCol ? 'Expand sub-forms' : 'Collapse sub-forms'}
+            >
+              {isCol ? `+${children.length}` : '−'}
+            </button>
+          )}
+        </div>
+        {!isCol && children.length > 0 && (
+          <div className="cfgrid-children">
+            {children.map(cid => renderForm(cid, depth + 1))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  if (formNodes.length === 0) {
+    return (
+      <div className="chtree-wrap">
+        <div className="chtree-empty-msg">
+          No form nodes yet. Add nodes from the toolbar above.
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="cfgrid-wrap">
+      <div className="cfgrid-grid">
+        {rootForms.map(f => renderForm(f.id, 0))}
+      </div>
+    </div>
+  );
+}
+
+// ── Collapsible All-Layers Grid (with drag-and-drop for unallocated) ──────
+
+function CollapsibleAllLayersGrid({ nodes, edges, domainStyling, setEdges }) {
+  const [collapsed, setCollapsed] = React.useState({});
+  const [dragOver, setDragOver] = React.useState(null);
+
+  const nodeMap = React.useMemo(() => {
+    const m = {};
+    nodes.forEach(n => { m[n.id] = n; });
+    return m;
+  }, [nodes]);
+
+  const { formFuncs, formFails, formKids, isChildForm, linkedFuncIds, linkedFailIds } =
+    React.useMemo(() => {
+      const ff = {}, fa = {}, fk = {}, icf = new Set(), lfi = new Set(), lai = new Set();
+      edges.forEach(e => {
+        const t = e.data?.edgeType;
+        if (t === 'performs_function') { (ff[e.source] = ff[e.source] || []).push(e.target); lfi.add(e.target); }
+        if (t === 'has_failure')       { (fa[e.source] = fa[e.source] || []).push(e.target); lai.add(e.target); }
+        if (t === 'form_hierarchy')    { (fk[e.source] = fk[e.source] || []).push(e.target); icf.add(e.target); }
+      });
+      return { formFuncs: ff, formFails: fa, formKids: fk, isChildForm: icf, linkedFuncIds: lfi, linkedFailIds: lai };
+    }, [edges]);
+
+  const rootForms = React.useMemo(
+    () => nodes.filter(n => n.data?.layer === 'form' && !isChildForm.has(n.id)),
+    [nodes, isChildForm]
+  );
+
+  const unallocated = React.useMemo(() => ({
+    functions: nodes.filter(n => n.data?.layer === 'function' && !linkedFuncIds.has(n.id)),
+    failures:  nodes.filter(n => n.data?.layer === 'failure'  && !linkedFailIds.has(n.id)),
+  }), [nodes, linkedFuncIds, linkedFailIds]);
+
+  const toggle = React.useCallback(
+    id => setCollapsed(prev => ({ ...prev, [id]: !prev[id] })),
+    []
+  );
+
+  const handleDrop = React.useCallback((formId, e) => {
+    e.preventDefault();
+    setDragOver(null);
+    try {
+      const { id: nodeId, layer } = JSON.parse(e.dataTransfer.getData('text/plain'));
+      const edgeType = layer === 'function' ? 'performs_function' : 'has_failure';
+      setEdges(eds => {
+        if (eds.some(ed => ed.source === formId && ed.target === nodeId && ed.data?.edgeType === edgeType)) return eds;
+        return [...eds, {
+          id: `e-${formId}-${nodeId}-${Date.now()}`,
+          source: formId,
+          target: nodeId,
+          data: { edgeType },
+          type: 'default',
+          markerEnd: { type: MarkerType.ArrowClosed },
+        }];
+      });
+    } catch (_) { /* ignore malformed drag data */ }
+  }, [setEdges]);
+
+  const funcColor = domainStyling?.theme?.functionLayerColor || '#8b5cf6';
+  const failColor = domainStyling?.theme?.failureLayerColor || '#ef4444';
+  const formColor = domainStyling?.theme?.formLayerColor    || '#3b82f6';
+
+  const renderForm = (formId, depth) => {
+    const form = nodeMap[formId];
+    if (!form) return null;
+    const funcs    = formFuncs[formId] || [];
+    const fails    = formFails[formId] || [];
+    const children = formKids[formId]  || [];
+    const isCol    = collapsed[formId];
+    const isTarget = dragOver === formId;
+
+    return (
+      <div
+        key={formId}
+        className={`callgrid-form callgrid-form-d${Math.min(depth, 3)}${isTarget ? ' callgrid-drag-over' : ''}`}
+        onDragOver={e => { e.preventDefault(); setDragOver(formId); }}
+        onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget)) setDragOver(null); }}
+        onDrop={e => handleDrop(formId, e)}
+      >
+        <div className="callgrid-form-header" style={{ borderLeftColor: formColor }}>
+          <span className="callgrid-form-label">{form.data?.label}</span>
+          <div className="callgrid-badges">
+            {funcs.length > 0 && (
+              <span className="callgrid-badge"
+                style={{ background: funcColor + '22', color: funcColor, borderColor: funcColor }}>
+                {funcs.length} fn
+              </span>
+            )}
+            {fails.length > 0 && (
+              <span className="callgrid-badge"
+                style={{ background: failColor + '22', color: failColor, borderColor: failColor }}>
+                {fails.length} fail
+              </span>
+            )}
+          </div>
+          <button className="cfgrid-toggle-btn" onClick={() => toggle(formId)}
+            title={isCol ? 'Expand' : 'Collapse'}>
+            {isCol ? '+' : '−'}
+          </button>
+        </div>
+        {!isCol && (
+          <div className="callgrid-form-body">
+            {funcs.map(fid => nodeMap[fid] && (
+              <span key={fid} className="callgrid-chip callgrid-chip-func"
+                style={{ borderColor: funcColor }} title={nodeMap[fid].data?.label}>
+                {nodeMap[fid].data?.label}
+              </span>
+            ))}
+            {fails.map(fid => nodeMap[fid] && (
+              <span key={fid} className="callgrid-chip callgrid-chip-fail"
+                style={{ borderColor: failColor }} title={nodeMap[fid].data?.label}>
+                {nodeMap[fid].data?.label}
+              </span>
+            ))}
+            {children.length > 0 && (
+              <div className="callgrid-children">
+                {children.map(cid => renderForm(cid, depth + 1))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const hasUnallocated = unallocated.functions.length > 0 || unallocated.failures.length > 0;
+
+  return (
+    <div className="callgrid-wrap">
+      <div className="callgrid-grid">
+        {rootForms.length === 0
+          ? <div className="chtree-empty-msg">No form nodes yet. Add nodes from the toolbar above.</div>
+          : rootForms.map(f => renderForm(f.id, 0))
+        }
+      </div>
+      {hasUnallocated && (
+        <div className="callgrid-unallocated">
+          <div className="callgrid-unallocated-header">Unallocated — drag into a form ↑</div>
+          <div className="callgrid-unallocated-items">
+            {unallocated.functions.map(n => (
+              <div key={n.id}
+                className="callgrid-chip callgrid-chip-func callgrid-chip-draggable"
+                style={{ borderColor: funcColor }}
+                draggable
+                onDragStart={e => e.dataTransfer.setData('text/plain', JSON.stringify({ id: n.id, layer: 'function' }))}
+                title={`Drag to assign function: ${n.data?.label}`}
+              >
+                {n.data?.label}
+              </div>
+            ))}
+            {unallocated.failures.map(n => (
+              <div key={n.id}
+                className="callgrid-chip callgrid-chip-fail callgrid-chip-draggable"
+                style={{ borderColor: failColor }}
+                draggable
+                onDragStart={e => e.dataTransfer.setData('text/plain', JSON.stringify({ id: n.id, layer: 'failure' }))}
+                title={`Drag to assign failure: ${n.data?.label}`}
+              >
+                {n.data?.label}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 
 function GraphEditor({ graph, domainInfo, domainStyling, onGraphChange, activeLayer, onLayerChange }) {
-  const [nodes, setNodes, onNodesChange] = useNodesState(graph.nodes || []);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(graph.edges || []);
+  const [nodes, setNodes] = useNodesState(graph.nodes || []);
+  const [edges, setEdges] = useEdgesState(graph.edges || []);
   const [selectedNodeType, setSelectedNodeType] = useState(null);
   const [nodeLabel, setNodeLabel] = useState('');
   const [validationError, setValidationError] = useState('');
@@ -472,19 +492,6 @@ function GraphEditor({ graph, domainInfo, domainStyling, onGraphChange, activeLa
     }, 300);
     return () => clearTimeout(updateTimeoutRef.current);
   }, [nodes, edges, onGraphChange]);
-
-  // Filter nodes/edges for canvas view based on active layer
-  // Uses ReactFlow's `hidden` property to hide nodes/edges without removing them from state
-  const displayedNodes = React.useMemo(() => {
-    if (activeLayer === 'all') return nodes.map(n => ({ ...n, hidden: false }));
-    return nodes.map(n => ({ ...n, hidden: n.data?.layer !== activeLayer }));
-  }, [nodes, activeLayer]);
-
-  const displayedEdges = React.useMemo(() => {
-    if (activeLayer === 'all') return edges.map(e => ({ ...e, hidden: false }));
-    const visibleIds = new Set(displayedNodes.filter(n => !n.hidden).map(n => n.id));
-    return edges.map(e => ({ ...e, hidden: !visibleIds.has(e.source) || !visibleIds.has(e.target) }));
-  }, [edges, displayedNodes, activeLayer]);
 
   // Group node types by layer
   const groupedNodeTypes = React.useMemo(() => {
@@ -531,16 +538,6 @@ function GraphEditor({ graph, domainInfo, domainStyling, onGraphChange, activeLa
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
     };
   };
-
-  const getEdgeStyle = useCallback((edgeType) => {
-    if (!domainStyling?.edge_styles) return {};
-    const s = domainStyling.edge_styles[edgeType] || {};
-    return {
-      stroke: s.stroke || '#94a3b8',
-      strokeWidth: s.strokeWidth || 1.5,
-      strokeDasharray: s.strokeDasharray || undefined,
-    };
-  }, [domainStyling]);
 
   const getNextNodePosition = () => {
     const grid = nodePositionGrid.current;
@@ -604,65 +601,6 @@ function GraphEditor({ graph, domainInfo, domainStyling, onGraphChange, activeLa
     setNodeLabel('');
     labelInputRef.current?.focus();
   };
-
-  // Determine the required edge type based on the strict layer hierarchy.
-  // Rules are defined in HIERARCHY_RULES above.
-  const getHierarchyEdgeType = useCallback((srcLayer, tgtLayer) => {
-    const rule = HIERARCHY_RULES.find(r => r.src === srcLayer && r.tgt === tgtLayer);
-    return rule ? rule.edgeType : null;
-  }, []);
-
-  const onConnect = useCallback(
-    (params) => {
-      const sourceNode = nodes.find(n => n.id === params.source);
-      const targetNode = nodes.find(n => n.id === params.target);
-
-      if (!sourceNode || !targetNode) return;
-
-      const srcLayer = sourceNode.data?.layer;
-      const tgtLayer = targetNode.data?.layer;
-      const edgeType = getHierarchyEdgeType(srcLayer, tgtLayer);
-
-      if (!edgeType) {
-        setValidationError(
-          `Cannot connect ${srcLayer} → ${tgtLayer}. Allowed: ${HIERARCHY_ALLOWED_SUMMARY}.`
-        );
-        return;
-      }
-
-      setValidationError('');
-      const edgeStyle = getEdgeStyle(edgeType);
-      const reactFlowType = domainStyling?.edge_styles?.[edgeType]?.type || 'default';
-      setEdges(eds => addEdge({
-        ...params,
-        type: reactFlowType,
-        data: { edgeType },
-        animated: domainStyling?.edge_styles?.[edgeType]?.animated || false,
-        markerEnd: { type: MarkerType.ArrowClosed },
-        style: edgeStyle,
-      }, eds));
-    },
-    [nodes, getHierarchyEdgeType, domainStyling, setEdges, getEdgeStyle]
-  );
-
-  const onNodesDelete = useCallback(
-    (deleted) => {
-      setEdges(eds => eds.filter(
-        e => !deleted.some(n => n.id === e.source || n.id === e.target)
-      ));
-    },
-    [setEdges]
-  );
-
-  // Layer stats
-  const layerStats = React.useMemo(() => {
-    const s = { form: 0, function: 0, failure: 0 };
-    nodes.forEach(n => {
-      const l = n.data?.layer;
-      if (l && s[l] !== undefined) s[l]++;
-    });
-    return s;
-  }, [nodes]);
 
   const currentLayerTypes = activeLayer === 'all'
     ? Object.values(groupedNodeTypes).flat()
@@ -735,58 +673,19 @@ function GraphEditor({ graph, domainInfo, domainStyling, onGraphChange, activeLa
           childEdgeType="failure_propagation"
           accentColor={domainStyling?.theme?.failureLayerColor || '#ef4444'}
         />
-      ) : activeLayer === 'all' ? (
-        <AllLayersGroupedView
+      ) : activeLayer === 'form' ? (
+        <CollapsibleFormGrid
           nodes={nodes}
           edges={edges}
           domainStyling={domainStyling}
-          onGraphChange={onGraphChange}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
-          onNodesDelete={onNodesDelete}
         />
       ) : (
-        <div className={`graph-canvas graph-canvas--${activeLayer}`}>
-          <ReactFlow
-            nodes={displayedNodes}
-            edges={displayedEdges}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-            onConnect={onConnect}
-            onNodesDelete={onNodesDelete}
-            nodeTypes={nodeTypes}
-            fitView
-            attributionPosition="bottom-left"
-            deleteKeyCode="Delete"
-          >
-            <Controls />
-            <MiniMap
-              nodeColor={node => {
-                const nt = node.data?.nodeType;
-                return domainStyling?.node_styles?.[nt]?.backgroundColor || '#6366f1';
-              }}
-              style={{ background: '#f8fafc' }}
-            />
-            <Background color="#e2e8f0" gap={20} size={1} />
-
-            <Panel position="top-right" className="layer-stats-panel">
-              {LAYERS.map(l => (
-                <div
-                  key={l.id}
-                  className={`layer-stat layer-stat-${l.id}`}
-                  style={{
-                    borderLeftColor:
-                      domainStyling?.theme?.[`${l.id}LayerColor`] || '#6366f1',
-                  }}
-                >
-                  <span className="ls-label">{l.label}</span>
-                  <span className="ls-count">{layerStats[l.id]}</span>
-                </div>
-              ))}
-            </Panel>
-          </ReactFlow>
-        </div>
+        <CollapsibleAllLayersGrid
+          nodes={nodes}
+          edges={edges}
+          domainStyling={domainStyling}
+          setEdges={setEdges}
+        />
       )}
     </div>
   );

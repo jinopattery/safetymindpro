@@ -51,7 +51,7 @@ function Dashboard({ user, onLogout }) {
   return (
     <div className="dashboard">
       <header className="dashboard-header">
-        <span className="dashboard-app-title">Automotive</span>
+        <span className="dashboard-app-title">SafetyMindPro</span>
         <div className="dashboard-header-right">
           <span className="dashboard-user-name">{user?.full_name || user?.username}</span>
           <button onClick={onLogout} className="dashboard-btn-icon" title="Logout">
