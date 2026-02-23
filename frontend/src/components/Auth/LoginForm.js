@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { authAPI } from '../../api/auth';
 import './AuthForms.css';
 
 function LoginForm({ onLogin }) {
@@ -9,6 +10,8 @@ function LoginForm({ onLogin }) {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [unverifiedEmail, setUnverifiedEmail] = useState('');
+  const [resendStatus, setResendStatus] = useState('');
 
   const handleChange = (e) => {
     setFormData({
@@ -16,18 +19,39 @@ function LoginForm({ onLogin }) {
       [e.target.name]: e.target.value
     });
     setError('');
+    setUnverifiedEmail('');
+    setResendStatus('');
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setUnverifiedEmail('');
+    setResendStatus('');
 
     const result = await onLogin(formData);
     
     if (!result.success) {
-      setError(result.error);
+      if (result.error === 'EMAIL_NOT_VERIFIED') {
+        // Show a helpful banner with a resend link instead of a raw error
+        setUnverifiedEmail(formData.username);
+      } else {
+        setError(result.error);
+      }
       setLoading(false);
+    }
+  };
+
+  const handleResend = async () => {
+    setResendStatus('sending');
+    try {
+      // The backend resolves both username and email, so passing the username
+      // entered in the login form is sufficient.
+      await authAPI.resendVerification(unverifiedEmail);
+      setResendStatus('sent');
+    } catch {
+      setResendStatus('error');
     }
   };
 
@@ -45,6 +69,29 @@ function LoginForm({ onLogin }) {
           {error && (
             <div className="error-message">
               ⚠️ {error}
+            </div>
+          )}
+
+          {unverifiedEmail && (
+            <div className="info-message">
+              📧 Your email address has not been verified yet. Please check your inbox
+              and click the verification link.
+              {resendStatus !== 'sent' && (
+                <button
+                  type="button"
+                  className="btn-link"
+                  onClick={handleResend}
+                  disabled={resendStatus === 'sending'}
+                >
+                  {resendStatus === 'sending' ? 'Sending…' : 'Resend verification email'}
+                </button>
+              )}
+              {resendStatus === 'sent' && (
+                <span className="resend-ok"> ✓ Email sent – please check your inbox.</span>
+              )}
+              {resendStatus === 'error' && (
+                <span className="resend-error"> Could not send email, please try again later.</span>
+              )}
             </div>
           )}
 

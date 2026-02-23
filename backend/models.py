@@ -19,10 +19,38 @@ class User(Base):
     is_superuser = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     last_login = Column(DateTime)
-    
+
+    # Email verification (required before login)
+    email_verified = Column(Boolean, default=False)
+    email_verification_token = Column(String, nullable=True, index=True)
+    email_verification_sent_at = Column(DateTime, nullable=True)
+
+    # GDPR / data-privacy consent
+    gdpr_consent_at = Column(DateTime, nullable=True)
+    gdpr_consent_version = Column(String, nullable=True, default="1.0")
+
     # Relationships
     projects = relationship("Project", back_populates="owner")
     graphs = relationship("Graph", back_populates="owner")
+    activity_logs = relationship("UserActivityLog", back_populates="user", cascade="all, delete-orphan")
+
+
+class UserActivityLog(Base):
+    """
+    Audit log for privacy-relevant user actions (GDPR Article 30).
+    Only records action type, timestamp, and optional IP – no personal payload.
+    """
+    __tablename__ = "user_activity_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    action = Column(String, nullable=False)          # e.g. "login", "logout", "data_export"
+    ip_address = Column(String, nullable=True)
+    user_agent = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relationships
+    user = relationship("User", back_populates="activity_logs")
 
 class Project(Base):
     __tablename__ = "projects"

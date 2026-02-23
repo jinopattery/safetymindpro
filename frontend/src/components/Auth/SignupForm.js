@@ -8,15 +8,17 @@ function SignupForm({ onSignup }) {
     username: '',
     password: '',
     confirmPassword: '',
-    full_name: ''
+    full_name: '',
+    gdpr_consent: false,
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
+    const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [e.target.name]: value,
     });
     setError('');
   };
@@ -47,15 +49,21 @@ function SignupForm({ onSignup }) {
       return;
     }
 
+    if (!formData.gdpr_consent) {
+      setError('You must accept the Privacy Policy and Terms of Use to continue.');
+      setLoading(false);
+      return;
+    }
+
     const result = await onSignup({
       email: formData.email,
       username: formData.username,
       password: formData.password,
-      full_name: formData.full_name
+      full_name: formData.full_name,
+      gdpr_consent: formData.gdpr_consent,
     });
     
     if (!result.success) {
-      // Display detailed error from backend if available
       if (result.error) {
         setError(result.error);
       } else {
@@ -148,6 +156,31 @@ function SignupForm({ onSignup }) {
               placeholder="Re-enter password"
             />
           </div>
+
+          {/* GDPR consent checkbox */}
+          <div className="form-group consent-group">
+            <label className="consent-label">
+              <input
+                type="checkbox"
+                name="gdpr_consent"
+                checked={formData.gdpr_consent}
+                onChange={handleChange}
+                required
+              />
+              <span>
+                I have read and accept the{' '}
+                <Link to="/privacy-policy" target="_blank" rel="noopener noreferrer">
+                  Privacy Policy
+                </Link>{' '}
+                and agree to the processing of my data as described therein. *
+              </span>
+            </label>
+          </div>
+
+          <p className="consent-note">
+            After registration you will receive a verification email. Please check your inbox
+            and confirm your address before logging in.
+          </p>
 
           <button 
             type="submit" 
