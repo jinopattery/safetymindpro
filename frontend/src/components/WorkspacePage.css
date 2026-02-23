@@ -414,28 +414,30 @@
 }
 
 .layer-btn {
-  padding: 3px 8px;
-  border: 1px solid #e5e7eb;
-  border-radius: 4px;
-  background: #f8fafc;
-  color: #64748b;
-  font-size: 0.7rem;
-  font-weight: 600;
-  cursor: pointer;
-  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
   height: 30px;
-  transition: background 0.12s, color 0.12s, border-color 0.12s;
+  border: 1px solid #e5e7eb;
+  border-radius: 5px;
+  background: #fff;
+  color: #64748b;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 
 .layer-btn:hover {
   background: #f1f5f9;
   color: #334155;
+  border-color: #cbd5e1;
 }
 
 .layer-btn.active { color: #fff; border-color: transparent; }
 .layer-btn-form.active     { background: #3b82f6; }
 .layer-btn-function.active { background: #8b5cf6; }
 .layer-btn-failure.active  { background: #ef4444; }
+.layer-btn-all.active      { background: #6366f1; }
 
 /* ── toolbar-middle: algorithm controls ──────────────────────────── */
 .toolbar-middle {
