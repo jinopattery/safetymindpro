@@ -35,8 +35,8 @@ function LoginForm({ onLogin }) {
     <div className="auth-container">
       <div className="auth-card">
         <div className="auth-header">
-          <h1>🔍 SafetyMindPro</h1>
-          <p>Multi-Domain Graph Analysis Platform</p>
+          <h1>Automotive</h1>
+          <p>Graph Analysis Platform</p>
         </div>
 
         <form onSubmit={handleSubmit} className="auth-form">
@@ -80,7 +80,7 @@ function LoginForm({ onLogin }) {
             className="btn btn-primary btn-block"
             disabled={loading}
           >
-            {loading ? '🔄 Logging in...' : '🚀 Log In'}
+            {loading ? 'Logging in…' : 'Log In'}
           </button>
 
           <div className="auth-footer">

@@ -51,7 +51,7 @@ function Dashboard({ user, onLogout }) {
   return (
     <div className="dashboard">
       <header className="dashboard-header">
-        <span className="dashboard-app-title">SafetyMindPro</span>
+        <span className="dashboard-app-title">Automotive</span>
         <div className="dashboard-header-right">
           <span className="dashboard-user-name">{user?.full_name || user?.username}</span>
           <button onClick={onLogout} className="dashboard-btn-icon" title="Logout">
@@ -83,7 +83,7 @@ function Dashboard({ user, onLogout }) {
         <main className="dashboard-main">
           <div className="dashboard-welcome">
             <h2>Select a Domain</h2>
-            <p>Choose a workspace from the sidebar or the cards below to begin analysis.</p>
+            <p>Choose a workspace from the sidebar or the cards below.</p>
           </div>
 
           {loading ? (
@@ -102,7 +102,6 @@ function Dashboard({ user, onLogout }) {
                   <div className="dashboard-domain-icon">{domainIcons[domain.name] || '📊'}</div>
                   <div className="dashboard-domain-info">
                     <h3>{domain.display_name}</h3>
-                    <p>{domain.description}</p>
                     <div className="dashboard-domain-stats">
                       <span>{domain.node_types.length} node types</span>
                       <span>{domain.algorithms.length} algorithms</span>
