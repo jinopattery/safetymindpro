@@ -804,7 +804,7 @@ function WorkspacePage({ user, onLogout }) {
           <button onClick={() => navigate('/dashboard')} className="btn-header-icon" title="Dashboard">
             <HomeIcon />
           </button>
-          <span className="app-title">SafetyMindPro</span>
+          <span className="app-title">Automotive</span>
         </div>
         <div className="workspace-header-right">
           <span className="user-name">{user?.username}</span>

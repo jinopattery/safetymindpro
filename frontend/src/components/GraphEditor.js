@@ -112,6 +112,339 @@ function EditableNode({ id, data, isConnectable, targetPosition = Position.Top, 
 // Define outside component for stable reference (required by ReactFlow)
 const nodeTypes = { default: EditableNode };
 
+// ── Collapsible Horizontal Tree view (used for Function and Failure layers) ──
+
+const NODE_W = 160;
+const NODE_H = 34;
+const COL_GAP = 60;  // horizontal gap between parent box and children column
+const ROW_GAP = 16;  // vertical gap between sibling rows
+
+function buildTreeLayout(layerNodes, edges, childEdgeType) {
+  const nodeIds = new Set(layerNodes.map(n => n.id));
+  const childMap = {};  // parentId → [childIds]
+  const hasParent = new Set();
+
+  edges.forEach(e => {
+    if (e.data?.edgeType === childEdgeType && nodeIds.has(e.source) && nodeIds.has(e.target)) {
+      if (!childMap[e.source]) childMap[e.source] = [];
+      childMap[e.source].push(e.target);
+      hasParent.add(e.target);
+    }
+  });
+
+  const roots = layerNodes.filter(n => !hasParent.has(n.id));
+
+  // compute (col, centerY) for every node via post-order
+  const coords = {}; // nodeId → { x, y }
+  let rowCounter = 0;
+
+  function measure(nodeId, col) {
+    const children = childMap[nodeId] || [];
+    if (children.length === 0) {
+      const y = rowCounter * (NODE_H + ROW_GAP);
+      rowCounter++;
+      coords[nodeId] = { x: col * (NODE_W + COL_GAP), y };
+      return y + NODE_H / 2;
+    }
+    const mids = children.map(cid => measure(cid, col + 1));
+    const centerY = (mids[0] + mids[mids.length - 1]) / 2 - NODE_H / 2;
+    coords[nodeId] = { x: col * (NODE_W + COL_GAP), y: centerY };
+    return centerY + NODE_H / 2;
+  }
+
+  roots.forEach(r => measure(r.id, 0));
+
+  // Orphan nodes not placed yet
+  layerNodes.forEach(n => {
+    if (!coords[n.id]) {
+      coords[n.id] = { x: 0, y: rowCounter * (NODE_H + ROW_GAP) };
+      rowCounter++;
+    }
+  });
+
+  const totalH = Math.max(rowCounter * (NODE_H + ROW_GAP), 200);
+  const maxCol = layerNodes.reduce((m, n) => Math.max(m, coords[n.id]?.x || 0), 0);
+  const totalW = maxCol + NODE_W + 60;
+
+  return { coords, childMap, roots, totalW, totalH };
+}
+
+function CollapsibleHorizontalTree({ nodes, edges, layer, childEdgeType, accentColor }) {
+  const [collapsed, setCollapsed] = React.useState({});
+  const containerRef = React.useRef(null);
+
+  const layerNodes = React.useMemo(
+    () => nodes.filter(n => n.data?.layer === layer),
+    [nodes, layer]
+  );
+
+  const { coords, childMap, roots, totalW, totalH } = React.useMemo(
+    () => buildTreeLayout(layerNodes, edges, childEdgeType),
+    [layerNodes, edges, childEdgeType]
+  );
+
+  const toggle = React.useCallback(id =>
+    setCollapsed(prev => ({ ...prev, [id]: !prev[id] })), []);
+
+  // Collect visible edges for SVG rendering
+  const svgEdges = React.useMemo(() => {
+    const lines = [];
+    const visited = new Set();
+    function collect(nodeId) {
+      if (collapsed[nodeId]) return;
+      const children = childMap[nodeId] || [];
+      children.forEach(cid => {
+        if (!coords[nodeId] || !coords[cid]) return;
+        lines.push({ from: nodeId, to: cid });
+        if (!visited.has(cid)) { visited.add(cid); collect(cid); }
+      });
+    }
+    roots.forEach(r => collect(r.id));
+    return lines;
+  }, [roots, childMap, coords, collapsed]);
+
+  // Build set of visible nodes (excluding collapsed subtrees)
+  const visibleIds = React.useMemo(() => {
+    const vis = new Set();
+    function walk(nodeId) {
+      vis.add(nodeId);
+      if (!collapsed[nodeId]) {
+        (childMap[nodeId] || []).forEach(walk);
+      }
+    }
+    roots.forEach(r => walk(r.id));
+    return vis;
+  }, [roots, childMap, collapsed]);
+
+  if (layerNodes.length === 0) {
+    return (
+      <div className="chtree-wrap">
+        <div className="chtree-empty-msg">
+          No {layer} nodes yet. Add nodes from the toolbar above.
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="chtree-wrap" ref={containerRef}>
+      <div className="chtree-canvas" style={{ width: totalW, height: totalH }}>
+        {/* SVG connector lines */}
+        <svg
+          className="chtree-svg-layer"
+          width={totalW}
+          height={totalH}
+        >
+          {svgEdges.map(({ from, to }) => {
+            const p = coords[from];
+            const c = coords[to];
+            const px = p.x + NODE_W;
+            const py = p.y + NODE_H / 2;
+            const cx = c.x;
+            const cy = c.y + NODE_H / 2;
+            const mx = (px + cx) / 2;
+            return (
+              <path
+                key={`${from}-${to}`}
+                d={`M${px},${py} C${mx},${py} ${mx},${cy} ${cx},${cy}`}
+                fill="none"
+                stroke="#cbd5e1"
+                strokeWidth="1.5"
+              />
+            );
+          })}
+        </svg>
+
+        {/* Node boxes */}
+        {layerNodes.filter(n => visibleIds.has(n.id)).map(n => {
+          const pos = coords[n.id];
+          if (!pos) return null;
+          const children = childMap[n.id] || [];
+          const isCollapsed = collapsed[n.id];
+          return (
+            <div
+              key={n.id}
+              className="chtree-node-box"
+              style={{
+                left: pos.x,
+                top: pos.y,
+                width: NODE_W,
+                borderLeftColor: accentColor,
+              }}
+              title={n.data?.label}
+            >
+              <span className="chtree-node-label">{n.data?.label}</span>
+              {children.length > 0 && (
+                <button
+                  className="chtree-toggle-btn"
+                  onClick={() => toggle(n.id)}
+                  title={isCollapsed ? 'Expand' : 'Collapse'}
+                >
+                  {isCollapsed ? '+' : '−'}
+                </button>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── All-Layers Grouped View (ReactFlow with forms as group containers) ──
+
+const CHILD_W = 140;
+const CHILD_H = 36;
+const GROUP_PAD = 14;
+const GROUP_HEADER = 32;
+const CHILD_GAP = 10;
+const GROUP_H_GAP = 24;
+const GROUP_V_GAP = 20;
+const COLS_PER_GROUP = 3;
+
+function computeGroupedNodes(nodes, edges) {
+  const nodeMap = {};
+  nodes.forEach(n => { nodeMap[n.id] = n; });
+
+  const formFuncs = {};   // formId → [funcIds]
+  const formFails = {};   // formId → [failIds]
+  const formKids  = {};   // formId → [childFormIds]
+  const isChildForm = new Set();
+
+  edges.forEach(e => {
+    const t = e.data?.edgeType;
+    if (t === 'performs_function') { (formFuncs[e.source] = formFuncs[e.source] || []).push(e.target); }
+    if (t === 'has_failure')       { (formFails[e.source] = formFails[e.source] || []).push(e.target); }
+    if (t === 'form_hierarchy')    { (formKids[e.source]  = formKids[e.source]  || []).push(e.target);  isChildForm.add(e.target); }
+  });
+
+  const rootForms = nodes.filter(n => n.data?.layer === 'form' && !isChildForm.has(n.id));
+
+  const result = [];
+  const placedIds = new Set();
+  let curY = 0;
+
+  function placeForm(formId, x) {
+    const n = nodeMap[formId];
+    if (!n) return 0;
+    placedIds.add(formId);
+
+    const funcs = formFuncs[formId] || [];
+    const fails = formFails[formId] || [];
+    const items = [...funcs, ...fails];
+    const itemCount = items.length;
+    const cols = Math.min(itemCount || 1, COLS_PER_GROUP);
+    const rows = itemCount > 0 ? Math.ceil(itemCount / cols) : 0;
+    const gw = Math.max(160, cols * (CHILD_W + CHILD_GAP) - CHILD_GAP + GROUP_PAD * 2);
+    const gh = GROUP_HEADER + (rows > 0 ? rows * (CHILD_H + CHILD_GAP) - CHILD_GAP + GROUP_PAD : GROUP_PAD);
+
+    result.push({
+      ...n,
+      type: 'group',
+      position: { x, y: curY },
+      style: {
+        width: gw,
+        height: gh,
+        background: 'rgba(241,245,249,0.9)',
+        border: '1.5px dashed #94a3b8',
+        borderRadius: 8,
+      },
+      data: { ...n.data, isGroupParent: true },
+    });
+
+    items.forEach((itemId, idx) => {
+      const item = nodeMap[itemId];
+      if (!item) return;
+      placedIds.add(itemId);
+      const col = idx % cols;
+      const row = Math.floor(idx / cols);
+      result.push({
+        ...item,
+        parentId: formId,
+        extent: 'parent',
+        position: {
+          x: GROUP_PAD + col * (CHILD_W + CHILD_GAP),
+          y: GROUP_HEADER + row * (CHILD_H + CHILD_GAP),
+        },
+        style: { ...item.style, width: CHILD_W },
+        draggable: false,
+      });
+    });
+
+    const childForms = formKids[formId] || [];
+    let childX = x + gw + GROUP_H_GAP;
+    const startY = curY;
+    if (childForms.length > 0) {
+      curY += gh + GROUP_V_GAP;
+      childForms.forEach(cfId => {
+        placeForm(cfId, childX);
+        curY += GROUP_V_GAP;
+      });
+      curY = Math.max(curY, startY + gh);
+    } else {
+      curY += gh + GROUP_V_GAP;
+    }
+  }
+
+  rootForms.forEach(f => { placeForm(f.id, 0); });
+
+  // orphan nodes not placed (functions/failures not linked to any form)
+  nodes.forEach(n => {
+    if (!placedIds.has(n.id)) {
+      result.push({ ...n });
+    }
+  });
+
+  return result;
+}
+
+function AllLayersGroupedView({ nodes, edges, domainStyling, onGraphChange, onNodesChange, onEdgesChange, onConnect, onNodesDelete }) {
+  const groupedNodes = React.useMemo(() => computeGroupedNodes(nodes, edges), [nodes, edges]);
+
+  const layerStats = React.useMemo(() => {
+    const s = { form: 0, function: 0, failure: 0 };
+    nodes.forEach(n => { const l = n.data?.layer; if (l && s[l] !== undefined) s[l]++; });
+    return s;
+  }, [nodes]);
+
+  return (
+    <div className="graph-canvas graph-canvas--all">
+      <ReactFlow
+        nodes={groupedNodes}
+        edges={edges}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onConnect={onConnect}
+        onNodesDelete={onNodesDelete}
+        nodeTypes={nodeTypes}
+        fitView
+        attributionPosition="bottom-left"
+        deleteKeyCode="Delete"
+      >
+        <Controls />
+        <MiniMap
+          nodeColor={node => {
+            const nt = node.data?.nodeType;
+            return domainStyling?.node_styles?.[nt]?.backgroundColor || '#6366f1';
+          }}
+          style={{ background: '#f8fafc' }}
+        />
+        <Background color="#e2e8f0" gap={20} size={1} />
+        <Panel position="top-right" className="layer-stats-panel">
+          {LAYERS.map(l => (
+            <div key={l.id} className={`layer-stat layer-stat-${l.id}`}
+              style={{ borderLeftColor: domainStyling?.theme?.[`${l.id}LayerColor`] || '#6366f1' }}>
+              <span className="ls-label">{l.label}</span>
+              <span className="ls-count">{layerStats[l.id]}</span>
+            </div>
+          ))}
+        </Panel>
+      </ReactFlow>
+    </div>
+  );
+}
+
+
 function GraphEditor({ graph, domainInfo, domainStyling, onGraphChange, activeLayer, onLayerChange }) {
   const [nodes, setNodes, onNodesChange] = useNodesState(graph.nodes || []);
   const [edges, setEdges, onEdgesChange] = useEdgesState(graph.edges || []);
@@ -385,47 +718,76 @@ function GraphEditor({ graph, domainInfo, domainStyling, onGraphChange, activeLa
         </span>
       </div>
 
-      {/* Canvas */}
-      <div className={`graph-canvas graph-canvas--${activeLayer}`}>
-        <ReactFlow
-          nodes={displayedNodes}
-          edges={displayedEdges}
+      {/* Canvas – varies by layer */}
+      {activeLayer === 'function' ? (
+        <CollapsibleHorizontalTree
+          nodes={nodes}
+          edges={edges}
+          layer="function"
+          childEdgeType="function_flow"
+          accentColor={domainStyling?.theme?.functionLayerColor || '#8b5cf6'}
+        />
+      ) : activeLayer === 'failure' ? (
+        <CollapsibleHorizontalTree
+          nodes={nodes}
+          edges={edges}
+          layer="failure"
+          childEdgeType="failure_propagation"
+          accentColor={domainStyling?.theme?.failureLayerColor || '#ef4444'}
+        />
+      ) : activeLayer === 'all' ? (
+        <AllLayersGroupedView
+          nodes={nodes}
+          edges={edges}
+          domainStyling={domainStyling}
+          onGraphChange={onGraphChange}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
           onNodesDelete={onNodesDelete}
-          nodeTypes={nodeTypes}
-          fitView
-          attributionPosition="bottom-left"
-          deleteKeyCode="Delete"
-        >
-          <Controls />
-          <MiniMap
-            nodeColor={node => {
-              const nt = node.data?.nodeType;
-              return domainStyling?.node_styles?.[nt]?.backgroundColor || '#6366f1';
-            }}
-            style={{ background: '#f8fafc' }}
-          />
-          <Background color="#e2e8f0" gap={20} size={1} />
+        />
+      ) : (
+        <div className={`graph-canvas graph-canvas--${activeLayer}`}>
+          <ReactFlow
+            nodes={displayedNodes}
+            edges={displayedEdges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onConnect={onConnect}
+            onNodesDelete={onNodesDelete}
+            nodeTypes={nodeTypes}
+            fitView
+            attributionPosition="bottom-left"
+            deleteKeyCode="Delete"
+          >
+            <Controls />
+            <MiniMap
+              nodeColor={node => {
+                const nt = node.data?.nodeType;
+                return domainStyling?.node_styles?.[nt]?.backgroundColor || '#6366f1';
+              }}
+              style={{ background: '#f8fafc' }}
+            />
+            <Background color="#e2e8f0" gap={20} size={1} />
 
-          <Panel position="top-right" className="layer-stats-panel">
-            {LAYERS.map(l => (
-              <div
-                key={l.id}
-                className={`layer-stat layer-stat-${l.id}`}
-                style={{
-                  borderLeftColor:
-                    domainStyling?.theme?.[`${l.id}LayerColor`] || '#6366f1',
-                }}
-              >
-                <span className="ls-label">{l.label}</span>
-                <span className="ls-count">{layerStats[l.id]}</span>
-              </div>
-            ))}
-          </Panel>
-        </ReactFlow>
-      </div>
+            <Panel position="top-right" className="layer-stats-panel">
+              {LAYERS.map(l => (
+                <div
+                  key={l.id}
+                  className={`layer-stat layer-stat-${l.id}`}
+                  style={{
+                    borderLeftColor:
+                      domainStyling?.theme?.[`${l.id}LayerColor`] || '#6366f1',
+                  }}
+                >
+                  <span className="ls-label">{l.label}</span>
+                  <span className="ls-count">{layerStats[l.id]}</span>
+                </div>
+              ))}
+            </Panel>
+          </ReactFlow>
+        </div>
+      )}
     </div>
   );
 }
