@@ -333,7 +333,7 @@ function computeGroupedNodes(nodes, edges) {
     const fails = formFails[formId] || [];
     const items = [...funcs, ...fails];
     const itemCount = items.length;
-    const cols = Math.min(itemCount || 1, COLS_PER_GROUP);
+    const cols = Math.min(Math.max(itemCount, 1), COLS_PER_GROUP);
     const rows = itemCount > 0 ? Math.ceil(itemCount / cols) : 0;
     const gw = Math.max(160, cols * (CHILD_W + CHILD_GAP) - CHILD_GAP + GROUP_PAD * 2);
     const gh = GROUP_HEADER + (rows > 0 ? rows * (CHILD_H + CHILD_GAP) - CHILD_GAP + GROUP_PAD : GROUP_PAD);

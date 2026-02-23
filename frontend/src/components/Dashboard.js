@@ -103,7 +103,7 @@ function Dashboard({ user, onLogout }) {
                   <div className="dashboard-domain-info">
                     <h3>{domain.display_name}</h3>
                     <div className="dashboard-domain-stats">
-                      <span>{domain.node_types.length} nodes</span>
+                      <span>{domain.node_types.length} node types</span>
                       <span>{domain.algorithms.length} algorithms</span>
                     </div>
                   </div>
