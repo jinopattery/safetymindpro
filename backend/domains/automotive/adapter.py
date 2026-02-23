@@ -203,17 +203,6 @@ class AutomotiveDomain(DomainAdapter):
                     "properties": {}  # Time-series: temperature, vibration, wear
                 }
             ),
-            DomainNodeType(
-                name="form_system",
-                display_name="System (Form)",
-                icon="🚗",
-                description="Top-level automotive system (Form Element)",
-                default_attributes={
-                    "layer": "form",
-                    "characteristics": {},
-                    "subsystems": []
-                }
-            ),
             # Function Layer Nodes (Behavioral Structure)
             DomainNodeType(
                 name="function",
@@ -244,17 +233,6 @@ class AutomotiveDomain(DomainAdapter):
                     "controls": []
                 }
             ),
-            DomainNodeType(
-                name="fault_event",
-                display_name="Fault Event",
-                icon="🔴",
-                description="Event in fault tree analysis (Failure Layer)",
-                default_attributes={
-                    "layer": "failure",
-                    "probability": 0.0,
-                    "gate_type": None  # AND, OR, etc.
-                }
-            )
         ]
     
     def get_edge_types(self) -> List[DomainEdgeType]:
@@ -314,16 +292,6 @@ class AutomotiveDomain(DomainAdapter):
                     "relation": "has_failure"
                 }
             ),
-            DomainEdgeType(
-                name="fault_tree_gate",
-                display_name="Fault Tree Gate",
-                description="Logical gate connection in fault tree",
-                directed=True,
-                default_attributes={
-                    "gate_type": "AND",  # AND, OR, etc.
-                    "relation": "fault_gate"
-                }
-            )
         ]
     
     def get_styling_config(self) -> StylingConfig:
@@ -339,16 +307,6 @@ class AutomotiveDomain(DomainAdapter):
                     "fontSize": 14,
                     "padding": 12,
                     "borderRadius": 5
-                },
-                "form_system": {
-                    "shape": "rectangle",
-                    "backgroundColor": "#2ecc71",
-                    "color": "#ffffff",
-                    "borderColor": "#27ae60",
-                    "borderWidth": 3,
-                    "fontSize": 16,
-                    "padding": 15,
-                    "borderRadius": 8
                 },
                 # Function Layer Styles
                 "function": {
@@ -371,14 +329,6 @@ class AutomotiveDomain(DomainAdapter):
                     "fontSize": 12,
                     "padding": 10
                 },
-                "fault_event": {
-                    "shape": "circle",
-                    "backgroundColor": "#e67e22",
-                    "color": "#ffffff",
-                    "borderColor": "#d35400",
-                    "borderWidth": 2,
-                    "fontSize": 12
-                }
             },
             edge_styles={
                 # Form Layer Edges
@@ -419,12 +369,6 @@ class AutomotiveDomain(DomainAdapter):
                     "type": "straight",
                     "arrowSize": 7
                 },
-                "fault_tree_gate": {
-                    "stroke": "#34495e",
-                    "strokeWidth": 2,
-                    "type": "smoothstep",
-                    "arrowSize": 7
-                }
             },
             theme={
                 "name": "Automotive",

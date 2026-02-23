@@ -6,9 +6,9 @@ import './WorkspacePage.css';
 
 // Layer definitions (mirrored from GraphEditor for toolbar buttons)
 const LAYERS = [
-  { id: 'form',     label: 'Structure', title: 'Physical / Logical Structure', shortcut: '1' },
-  { id: 'function', label: 'Behavior',  title: 'Behavioral Structure',         shortcut: '2' },
-  { id: 'failure',  label: 'Risk',      title: 'Risk Structure',               shortcut: '3' },
+  { id: 'form',     label: 'Form',     title: 'Physical / Logical Structure', shortcut: '1' },
+  { id: 'function', label: 'Function', title: 'Behavioral Structure',         shortcut: '2' },
+  { id: 'failure',  label: 'Failure',  title: 'Risk Structure',               shortcut: '3' },
 ];
 
 // Default algorithm parameters
@@ -747,7 +747,7 @@ function WorkspacePage({ user, onLogout }) {
           {domains.map((d) => (
             <button
               key={d.name}
-              className={`domain-tab ${selectedDomain === d.name ? 'active' : ''}`}
+              className="domain-tab"
               onClick={() => handleDomainChange(d.name)}
               title={d.display_name}
             >
