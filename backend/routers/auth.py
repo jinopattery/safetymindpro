@@ -74,6 +74,9 @@ class Token(BaseModel):
     access_token: str
     token_type: str
     user: UserResponse
+    # Populated only when SMTP is not configured (no-mail-server mode).
+    # The frontend uses this to show a clickable verification link on-screen.
+    verification_link: Optional[str] = None
 
 class VerifyEmailRequest(BaseModel):
     token: str
@@ -107,21 +110,26 @@ def generate_verification_token() -> str:
     """Generate a secure URL-safe verification token."""
     return secrets.token_urlsafe(32)
 
-def send_verification_email(email: str, token: str) -> bool:
+def send_verification_email(email: str, token: str) -> Optional[str]:
     """
     Send an email-verification message.
-    Returns True on success, False if SMTP is not configured.
-    In development (no SMTP configured) the verification link is logged instead.
+
+    Returns:
+      - ``None`` when the email was sent successfully via SMTP.
+      - The verification URL string when SMTP is not configured, so the caller
+        can surface it directly in the API response (no-mail-server mode).
     """
     verify_url = f"{APP_BASE_URL}/verify-email?token={token}"
 
     if not SMTP_HOST or not SMTP_USER:
-        # SMTP not configured – log the link so developers can verify manually
+        # SMTP not configured – return the URL so the caller can expose it
+        # directly in the signup response.  This makes the feature fully
+        # self-contained without any additional server software.
         logger.info(
             "Email verification (SMTP not configured). "
-            "Verify at: %s", verify_url
+            "Verification link: %s", verify_url
         )
-        return False
+        return verify_url
 
     try:
         msg = MIMEMultipart("alternative")
@@ -153,10 +161,12 @@ def send_verification_email(email: str, token: str) -> bool:
             server.login(SMTP_USER, SMTP_PASSWORD)
             server.sendmail(SMTP_FROM, [email], msg.as_string())
 
-        return True
+        return None  # email delivered – no in-app link needed
     except Exception as exc:
         logger.error("Failed to send verification email to %s: %s", email, exc)
-        return False
+        # SMTP is configured but failed – do NOT expose the link in the response.
+        # The user should contact support or retry; admins should fix SMTP.
+        return None
 
 def log_activity(db: Session, user_id: int, action: str, request: Request = None):
     """Record a privacy-relevant user action in the audit log."""
@@ -262,17 +272,20 @@ async def signup(user: UserCreate, request: Request, db: Session = Depends(get_d
     db.commit()
     db.refresh(db_user)
 
-    # Send verification email (non-blocking)
-    send_verification_email(db_user.email, verification_token)
+    # Send verification email; returns the link when SMTP is not configured
+    verification_link = send_verification_email(db_user.email, verification_token)
     log_activity(db, db_user.id, "signup", request)
 
     # Return token so the frontend can redirect to a "check your inbox" page.
     # If email verification is disabled, the user is effectively logged in immediately.
+    # verification_link is None when an email was sent; it is the URL when SMTP
+    # is not configured so the frontend can show it as a clickable in-app link.
     access_token = create_access_token(data={"sub": db_user.username})
 
     return {
         "access_token": access_token,
         "token_type": "bearer",
+        "verification_link": verification_link,
         "user": UserResponse(
             id=db_user.id,
             email=db_user.email,

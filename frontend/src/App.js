@@ -60,9 +60,8 @@ function App() {
       const data = await authAPI.signup(userData);
       setUser(data.user);
       // After signup keep user on a "check your email" state – do not auto-login
-      // The token is stored but we show the verification notice instead.
       setIsAuthenticated(false);
-      return { success: true };
+      return { success: true, verificationLink: data.verification_link || null };
     } catch (error) {
       console.error('Signup failed:', error);
       return { 

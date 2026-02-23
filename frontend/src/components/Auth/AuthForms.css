@@ -224,3 +224,18 @@
   font-weight: 600;
 }
 
+/* Post-signup success screen – in-app verification (no SMTP mode) */
+.info-message--success {
+  border-color: #22c55e;
+  background: #f0fdf4;
+  color: #15803d;
+}
+
+.btn-verify {
+  text-align: center;
+  text-decoration: none;
+  display: block;
+  padding: 10px 20px;
+  margin-top: 12px;
+}
+
