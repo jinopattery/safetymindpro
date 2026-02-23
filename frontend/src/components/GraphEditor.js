@@ -19,19 +19,19 @@ import './GraphEditor.css';
 const LAYERS = [
   {
     id: 'form',
-    label: 'Structure',
+    label: 'Form',
     title: 'Physical / Logical Structure',
     shortcut: '1',
   },
   {
     id: 'function',
-    label: 'Behavior',
+    label: 'Function',
     title: 'Behavioral Structure',
     shortcut: '2',
   },
   {
     id: 'failure',
-    label: 'Risk',
+    label: 'Failure',
     title: 'Risk Structure',
     shortcut: '3',
   },
@@ -139,6 +139,17 @@ function GraphEditor({ graph, domainInfo, domainStyling, onGraphChange, activeLa
     }, 300);
     return () => clearTimeout(updateTimeoutRef.current);
   }, [nodes, edges, onGraphChange]);
+
+  // Filter nodes/edges for canvas view based on active layer
+  // Uses ReactFlow's `hidden` property to hide nodes/edges without removing them from state
+  const displayedNodes = React.useMemo(() => {
+    return nodes.map(n => ({ ...n, hidden: n.data?.layer !== activeLayer }));
+  }, [nodes, activeLayer]);
+
+  const displayedEdges = React.useMemo(() => {
+    const visibleIds = new Set(displayedNodes.filter(n => !n.hidden).map(n => n.id));
+    return edges.map(e => ({ ...e, hidden: !visibleIds.has(e.source) || !visibleIds.has(e.target) }));
+  }, [edges, displayedNodes]);
 
   // Group node types by layer
   const groupedNodeTypes = React.useMemo(() => {
@@ -371,8 +382,8 @@ function GraphEditor({ graph, domainInfo, domainStyling, onGraphChange, activeLa
       {/* Canvas */}
       <div className={`graph-canvas graph-canvas--${activeLayer}`}>
         <ReactFlow
-          nodes={nodes}
-          edges={edges}
+          nodes={displayedNodes}
+          edges={displayedEdges}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}

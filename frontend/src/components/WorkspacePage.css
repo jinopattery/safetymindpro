@@ -414,15 +414,16 @@
 }
 
 .layer-btn {
-  padding: 4px 10px;
+  padding: 3px 8px;
   border: 1px solid #e5e7eb;
   border-radius: 4px;
   background: #f8fafc;
   color: #64748b;
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
+  height: 30px;
   transition: background 0.12s, color 0.12s, border-color 0.12s;
 }
 
