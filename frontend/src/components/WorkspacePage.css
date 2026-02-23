@@ -19,12 +19,19 @@
   box-shadow: 0 1px 0 rgba(255,255,255,0.06);
 }
 
-.workspace-header-left,
+.workspace-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
 .workspace-header-right {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
+  margin-left: auto;
 }
 
 .workspace-header-center {
@@ -112,7 +119,7 @@
 
 /* ── Sidebar ─────────────────────────────────────────────────────── */
 .workspace-sidebar {
-  width: 260px;
+  width: 200px;
   background: #1e2228;
   border-right: 1px solid #2d3139;
   overflow-y: auto;
@@ -212,17 +219,21 @@
 
 .explorer-tab-btn {
   flex: 1;
-  padding: 8px 4px;
+  padding: 6px 2px;
   background: transparent;
   border: none;
   border-bottom: 2px solid transparent;
   color: #6b7280;
-  font-size: 0.65rem;
+  font-size: 0.6rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   cursor: pointer;
   transition: color 0.15s, border-color 0.15s;
   text-transform: uppercase;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
 }
 
 .explorer-tab-btn:hover:not(.active) {
@@ -232,6 +243,12 @@
 .explorer-tab-btn.active {
   color: #cdd6f4;
   border-bottom-color: #6366f1;
+}
+
+.explorer-tab-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .explorer-section {
@@ -444,6 +461,7 @@
   flex: 1;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   min-width: 0;
   overflow-x: auto;
@@ -778,7 +796,7 @@
 
 /* ── Responsive ──────────────────────────────────────────────────── */
 @media (max-width: 900px) {
-  .workspace-sidebar { width: 200px; }
+  .workspace-sidebar { width: 160px; }
   .domain-tab-text { display: none; }
   .algo-select { min-width: 110px; }
 }

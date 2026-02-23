@@ -93,6 +93,27 @@ const HomeIcon = () => (
   </svg>
 );
 
+const ExplorerTabIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+    width="13" height="13">
+    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+  </svg>
+);
+
+const HierarchyTabIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+    width="13" height="13">
+    <line x1="8" y1="6" x2="21" y2="6"/>
+    <line x1="8" y1="12" x2="21" y2="12"/>
+    <line x1="8" y1="18" x2="21" y2="18"/>
+    <line x1="3" y1="6" x2="3.01" y2="6"/>
+    <line x1="3" y1="12" x2="3.01" y2="12"/>
+    <line x1="3" y1="18" x2="3.01" y2="18"/>
+  </svg>
+);
+
 // ── Layer icon components ──────────────────────────────────────────────────
 
 const FormIcon = () => (
@@ -787,8 +808,8 @@ function WorkspacePage({ user, onLogout }) {
         </div>
         <div className="workspace-header-right">
           <span className="user-name">{user?.username}</span>
-          <button onClick={onLogout} className="btn-icon-text" title="Logout">
-            <LogoutIcon /> Logout
+          <button onClick={onLogout} className="btn-header-icon" title="Logout">
+            <LogoutIcon />
           </button>
         </div>
       </header>
@@ -800,11 +821,19 @@ function WorkspacePage({ user, onLogout }) {
             <button
               className={`explorer-tab-btn${sidebarTab === 'explorer' ? ' active' : ''}`}
               onClick={() => setSidebarTab('explorer')}
-            >EXPLORER</button>
+              title="Explorer"
+            >
+              <span className="explorer-tab-icon"><ExplorerTabIcon /></span>
+              FILES
+            </button>
             <button
               className={`explorer-tab-btn${sidebarTab === 'hierarchy' ? ' active' : ''}`}
               onClick={() => setSidebarTab('hierarchy')}
-            >HIERARCHY</button>
+              title="Hierarchy"
+            >
+              <span className="explorer-tab-icon"><HierarchyTabIcon /></span>
+              TREE
+            </button>
           </div>
 
           {sidebarTab === 'explorer' && (
