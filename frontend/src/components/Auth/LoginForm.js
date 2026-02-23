@@ -35,7 +35,7 @@ function LoginForm({ onLogin }) {
     <div className="auth-container">
       <div className="auth-card">
         <div className="auth-header">
-          <h1>Automotive</h1>
+          <h1>SafetyMindPro</h1>
           <p>Graph Analysis Platform</p>
         </div>
 

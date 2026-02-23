@@ -2,7 +2,7 @@
 # This file defines the visual appearance for automotive safety analysis diagrams
 
 domain: automotive
-display_name: "Automotive Safety"
+display_name: "Automotive"
 
 # Node styling for different automotive node types
 node_styles:

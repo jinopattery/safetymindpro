@@ -183,7 +183,7 @@ class AutomotiveDomain(DomainAdapter):
     
     @property
     def domain_display_name(self) -> str:
-        return "Automotive Safety"
+        return "Automotive"
     
     @property
     def description(self) -> str:
