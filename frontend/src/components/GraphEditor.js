@@ -7,7 +7,10 @@ import ReactFlow, {
   useEdgesState,
   addEdge,
   MarkerType,
-  Panel
+  Panel,
+  Handle,
+  Position,
+  useReactFlow,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import './GraphEditor.css';
@@ -52,6 +55,62 @@ const HIERARCHY_HINTS_BY_LAYER = {
   function: ['Function→Function (child)', 'To link: draw from a Form node'].join(' · '),
   failure:  ['Failure→Failure (child)',   'To link: draw from a Form node'].join(' · '),
 };
+
+// ── Editable node component ────────────────────────────────────────────────
+function EditableNode({ id, data, isConnectable, targetPosition = Position.Top, sourcePosition = Position.Bottom }) {
+  const [editing, setEditing] = useState(false);
+  const [editVal, setEditVal] = useState('');
+  const { setNodes } = useReactFlow();
+  const inputRef = useRef(null);
+
+  const startEdit = useCallback((e) => {
+    e.stopPropagation();
+    setEditVal(data.label);
+    setEditing(true);
+    setTimeout(() => inputRef.current?.select(), 0);
+  }, [data.label]);
+
+  const commitEdit = useCallback(() => {
+    if (editVal.trim()) {
+      setNodes(nds => nds.map(n =>
+        n.id === id ? { ...n, data: { ...n.data, label: editVal.trim() } } : n
+      ));
+    }
+    setEditing(false);
+  }, [editVal, id, setNodes]);
+
+  return (
+    <>
+      <Handle type="target" position={targetPosition} isConnectable={isConnectable} />
+      <div
+        className="editable-node-content"
+        onDoubleClick={startEdit}
+        title={editing ? undefined : 'Double-click to rename'}
+      >
+        {editing ? (
+          <input
+            ref={inputRef}
+            className="editable-node-input"
+            value={editVal}
+            onChange={e => setEditVal(e.target.value)}
+            onBlur={commitEdit}
+            onKeyDown={e => {
+              if (e.key === 'Enter') { e.preventDefault(); commitEdit(); }
+              if (e.key === 'Escape') setEditing(false);
+            }}
+            onClick={e => e.stopPropagation()}
+          />
+        ) : (
+          <span>{data.label}</span>
+        )}
+      </div>
+      <Handle type="source" position={sourcePosition} isConnectable={isConnectable} />
+    </>
+  );
+}
+
+// Define outside component for stable reference (required by ReactFlow)
+const nodeTypes = { default: EditableNode };
 
 function GraphEditor({ graph, domainInfo, domainStyling, onGraphChange, activeLayer, onLayerChange }) {
   const [nodes, setNodes, onNodesChange] = useNodesState(graph.nodes || []);
@@ -318,6 +377,7 @@ function GraphEditor({ graph, domainInfo, domainStyling, onGraphChange, activeLa
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
           onNodesDelete={onNodesDelete}
+          nodeTypes={nodeTypes}
           fitView
           attributionPosition="bottom-left"
           deleteKeyCode="Delete"

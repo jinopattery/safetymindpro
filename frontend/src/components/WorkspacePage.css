@@ -205,13 +205,33 @@
 /* ── Explorer header ─────────────────────────────────────────────── */
 .explorer-header {
   display: flex;
-  justify-content: space-between;
-  padding: 10px 14px 6px;
-  font-size: 0.68rem;
+  padding: 0;
+  border-bottom: 1px solid #2d3139;
+  flex-shrink: 0;
+}
+
+.explorer-tab-btn {
+  flex: 1;
+  padding: 8px 4px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #6b7280;
+  font-size: 0.65rem;
   font-weight: 700;
-  letter-spacing: 0.1em;
-  color: #9399a6;
-  user-select: none;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+  text-transform: uppercase;
+}
+
+.explorer-tab-btn:hover:not(.active) {
+  color: #a6adc8;
+}
+
+.explorer-tab-btn.active {
+  color: #cdd6f4;
+  border-bottom-color: #6366f1;
 }
 
 .explorer-section {
@@ -763,5 +783,65 @@
 @media (max-width: 640px) {
   .workspace-sidebar { display: none; }
   .workspace-header-center { display: none; }
+}
+
+/* ── Home button in header ────────────────────────────────────────── */
+.btn-header-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 5px;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+  flex-shrink: 0;
+}
+
+.btn-header-icon:hover {
+  color: #e2e8f0;
+  border-color: rgba(255,255,255,0.3);
+  background: rgba(255,255,255,0.06);
+}
+
+/* ── File explorer rename input ──────────────────────────────────── */
+.explorer-file-rename {
+  flex: 1;
+  background: #2d3139;
+  border: 1px solid #6366f1;
+  border-radius: 2px;
+  color: #cdd6f4;
+  font-size: 0.78rem;
+  padding: 0 4px;
+  outline: none;
+  min-width: 0;
+}
+
+/* ── File drag-and-drop ──────────────────────────────────────────── */
+.explorer-file.dragging {
+  opacity: 0.4;
+}
+
+/* ── Hierarchy tree rename input ─────────────────────────────────── */
+.htree-rename-input {
+  flex: 1;
+  background: #2d3139;
+  border: 1px solid #6366f1;
+  border-radius: 2px;
+  color: #cdd6f4;
+  font-size: 0.75rem;
+  padding: 0 4px;
+  outline: none;
+  min-width: 0;
+}
+
+/* ── Hierarchy tree drag-over ────────────────────────────────────── */
+.htree-item.htree-drag-over {
+  background: rgba(99,102,241,0.25);
+  outline: 1px dashed rgba(99,102,241,0.6);
+  border-radius: 3px;
 }
 
