@@ -3,6 +3,24 @@ import { useNavigate } from 'react-router-dom';
 import { domainsAPI } from '../api/domains';
 import './Dashboard.css';
 
+const LogoutIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+    width="14" height="14">
+    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+    <polyline points="16 17 21 12 16 7"/>
+    <line x1="21" y1="12" x2="9" y2="12"/>
+  </svg>
+);
+
+const OpenIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+    width="13" height="13">
+    <polyline points="9 18 15 12 9 6"/>
+  </svg>
+);
+
 function Dashboard({ user, onLogout }) {
   const [domains, setDomains] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -33,53 +51,70 @@ function Dashboard({ user, onLogout }) {
   return (
     <div className="dashboard">
       <header className="dashboard-header">
-        <div className="dashboard-header-content">
-          <h1>🔍 SafetyMindPro</h1>
-          <div className="user-info">
-            <span>Welcome, {user?.full_name || user?.username}!</span>
-            <button onClick={onLogout} className="btn btn-secondary">
-              🚪 Logout
-            </button>
-          </div>
+        <span className="dashboard-app-title">SafetyMindPro</span>
+        <div className="dashboard-header-right">
+          <span className="dashboard-user-name">{user?.full_name || user?.username}</span>
+          <button onClick={onLogout} className="dashboard-btn-icon" title="Logout">
+            <LogoutIcon />
+          </button>
         </div>
       </header>
 
-      <main className="dashboard-main">
-        <div className="dashboard-intro">
-          <h2>Select a Domain to Begin</h2>
-          <p>Choose from our multi-domain graph analysis platform</p>
-        </div>
-
-        {loading ? (
-          <div className="loading">
-            <div className="spinner"></div>
-            <p>Loading domains...</p>
-          </div>
-        ) : (
-          <div className="domains-grid">
-            {domains.map((domain) => (
-              <div
+      <div className="dashboard-body">
+        <aside className="dashboard-sidebar">
+          <div className="dashboard-sidebar-section">
+            <div className="dashboard-sidebar-title">WORKSPACES</div>
+            {loading ? (
+              <div className="dashboard-sidebar-empty">Loading…</div>
+            ) : domains.map((domain) => (
+              <button
                 key={domain.name}
-                className="domain-card"
+                className="dashboard-sidebar-item"
                 onClick={() => navigate(`/workspace/${domain.name}`)}
+                title={domain.description}
               >
-                <div className="domain-icon">
-                  {domainIcons[domain.name] || '📊'}
-                </div>
-                <h3>{domain.display_name}</h3>
-                <p>{domain.description}</p>
-                <div className="domain-stats">
-                  <span>{domain.node_types.length} node types</span>
-                  <span>{domain.algorithms.length} algorithms</span>
-                </div>
-                <button className="btn btn-primary">
-                  Open Workspace →
-                </button>
-              </div>
+                <span className="dashboard-sidebar-icon">{domainIcons[domain.name] || '📊'}</span>
+                <span className="dashboard-sidebar-label">{domain.display_name}</span>
+              </button>
             ))}
           </div>
-        )}
-      </main>
+        </aside>
+
+        <main className="dashboard-main">
+          <div className="dashboard-welcome">
+            <h2>Select a Domain</h2>
+            <p>Choose a workspace from the sidebar or the cards below to begin analysis.</p>
+          </div>
+
+          {loading ? (
+            <div className="dashboard-loading">
+              <div className="dashboard-spinner"></div>
+              <p>Loading domains…</p>
+            </div>
+          ) : (
+            <div className="dashboard-domains-grid">
+              {domains.map((domain) => (
+                <div
+                  key={domain.name}
+                  className="dashboard-domain-card"
+                  onClick={() => navigate(`/workspace/${domain.name}`)}
+                >
+                  <div className="dashboard-domain-icon">{domainIcons[domain.name] || '📊'}</div>
+                  <div className="dashboard-domain-info">
+                    <h3>{domain.display_name}</h3>
+                    <p>{domain.description}</p>
+                    <div className="dashboard-domain-stats">
+                      <span>{domain.node_types.length} node types</span>
+                      <span>{domain.algorithms.length} algorithms</span>
+                    </div>
+                  </div>
+                  <div className="dashboard-domain-arrow"><OpenIcon /></div>
+                </div>
+              ))}
+            </div>
+          )}
+        </main>
+      </div>
     </div>
   );
 }
