@@ -4,13 +4,6 @@ import { domainsAPI } from '../api/domains';
 import GraphEditor from './GraphEditor';
 import './WorkspacePage.css';
 
-// Layer definitions (mirrored from GraphEditor for toolbar buttons)
-const LAYERS = [
-  { id: 'form',     label: 'Form',     title: 'Physical / Logical Structure', shortcut: '1' },
-  { id: 'function', label: 'Function', title: 'Behavioral Structure',         shortcut: '2' },
-  { id: 'failure',  label: 'Failure',  title: 'Risk Structure',               shortcut: '3' },
-];
-
 // Default algorithm parameters
 const getDefaultAlgorithmParams = (algorithmName) => {
   const defaults = {
@@ -99,6 +92,55 @@ const HomeIcon = () => (
     <polyline points="9 22 9 12 15 12 15 22"/>
   </svg>
 );
+
+// ── Layer icon components ──────────────────────────────────────────────────
+
+const FormIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+    width="15" height="15">
+    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+    <line x1="3" y1="9" x2="21" y2="9"/>
+    <line x1="9" y1="21" x2="9" y2="9"/>
+  </svg>
+);
+
+const FunctionIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+    width="15" height="15">
+    <circle cx="12" cy="12" r="3"/>
+    <path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/>
+    <path d="M15.54 8.46a5 5 0 0 1 0 7.07M8.46 8.46a5 5 0 0 0 0 7.07"/>
+  </svg>
+);
+
+const FailureIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+    width="15" height="15">
+    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+    <line x1="12" y1="9" x2="12" y2="13"/>
+    <line x1="12" y1="17" x2="12.01" y2="17"/>
+  </svg>
+);
+
+const AllLayersIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+    width="15" height="15">
+    <polygon points="12 2 2 7 12 12 22 7 12 2"/>
+    <polyline points="2 17 12 22 22 17"/>
+    <polyline points="2 12 12 17 22 12"/>
+  </svg>
+);
+
+// Layer definitions (mirrored from GraphEditor for toolbar buttons)
+const LAYERS = [
+  { id: 'form',     label: 'Form',     title: 'Physical / Logical Structure', shortcut: '1', Icon: FormIcon },
+  { id: 'function', label: 'Function', title: 'Behavioral Structure',         shortcut: '2', Icon: FunctionIcon },
+  { id: 'failure',  label: 'Failure',  title: 'Risk Structure',               shortcut: '3', Icon: FailureIcon },
+];
 
 // ── Hierarchy Explorer ────────────────────────────────────────────
 
@@ -410,7 +452,7 @@ function WorkspacePage({ user, onLogout }) {
   const { domain: urlDomain } = useParams();
   const navigate = useNavigate();
 
-  const [domains, setDomains] = useState([]);
+  const [, setDomains] = useState([]);
   const [selectedDomain, setSelectedDomain] = useState(urlDomain || null);
   const [domainInfo, setDomainInfo] = useState(null);
   const [domainStyling, setDomainStyling] = useState(null);
@@ -743,19 +785,6 @@ function WorkspacePage({ user, onLogout }) {
           </button>
           <span className="app-title">SafetyMindPro</span>
         </div>
-        <div className="workspace-header-center">
-          {domains.map((d) => (
-            <button
-              key={d.name}
-              className="domain-tab"
-              onClick={() => handleDomainChange(d.name)}
-              title={d.display_name}
-            >
-              <span className="domain-tab-icon">{domainIcons[d.name]}</span>
-              <span className="domain-tab-text">{d.display_name}</span>
-            </button>
-          ))}
-        </div>
         <div className="workspace-header-right">
           <span className="user-name">{user?.username}</span>
           <button onClick={onLogout} className="btn-icon-text" title="Logout">
@@ -897,11 +926,18 @@ function WorkspacePage({ user, onLogout }) {
                   key={layer.id}
                   className={`layer-btn layer-btn-${layer.id}${activeLayer === layer.id ? ' active' : ''}`}
                   onClick={() => setActiveLayer(layer.id)}
-                  title={`${layer.title} (Alt+${layer.shortcut})`}
+                  title={`${layer.label}: ${layer.title} (Alt+${layer.shortcut})`}
                 >
-                  {layer.label}
+                  <layer.Icon />
                 </button>
               ))}
+              <button
+                className={`layer-btn layer-btn-all${activeLayer === 'all' ? ' active' : ''}`}
+                onClick={() => setActiveLayer('all')}
+                title="All Layers: Show Forms, Functions and Failures"
+              >
+                <AllLayersIcon />
+              </button>
               {saveStatus && <span className="save-status">{saveStatus}</span>}
             </div>
 

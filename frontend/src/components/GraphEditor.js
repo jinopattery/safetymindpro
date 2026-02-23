@@ -143,13 +143,15 @@ function GraphEditor({ graph, domainInfo, domainStyling, onGraphChange, activeLa
   // Filter nodes/edges for canvas view based on active layer
   // Uses ReactFlow's `hidden` property to hide nodes/edges without removing them from state
   const displayedNodes = React.useMemo(() => {
+    if (activeLayer === 'all') return nodes.map(n => ({ ...n, hidden: false }));
     return nodes.map(n => ({ ...n, hidden: n.data?.layer !== activeLayer }));
   }, [nodes, activeLayer]);
 
   const displayedEdges = React.useMemo(() => {
+    if (activeLayer === 'all') return edges.map(e => ({ ...e, hidden: false }));
     const visibleIds = new Set(displayedNodes.filter(n => !n.hidden).map(n => n.id));
     return edges.map(e => ({ ...e, hidden: !visibleIds.has(e.source) || !visibleIds.has(e.target) }));
-  }, [edges, displayedNodes]);
+  }, [edges, displayedNodes, activeLayer]);
 
   // Group node types by layer
   const groupedNodeTypes = React.useMemo(() => {
@@ -164,18 +166,20 @@ function GraphEditor({ graph, domainInfo, domainStyling, onGraphChange, activeLa
 
   // Auto-select first node type when layer changes
   useEffect(() => {
-    const types = groupedNodeTypes[activeLayer] || [];
+    const effectiveLayer = activeLayer === 'all' ? 'form' : activeLayer;
+    const types = groupedNodeTypes[effectiveLayer] || [];
     setSelectedNodeType(types.length > 0 ? types[0].name : null);
     setValidationError('');
   }, [activeLayer, groupedNodeTypes]);
 
-  // Global keyboard shortcuts: Alt+1/2/3 to switch layers
+  // Global keyboard shortcuts: Alt+1/2/3 to switch layers, Alt+0 for all
   useEffect(() => {
     const handler = (e) => {
       if (!e.altKey) return;
       if (e.key === '1') { e.preventDefault(); onLayerChange('form'); }
       if (e.key === '2') { e.preventDefault(); onLayerChange('function'); }
       if (e.key === '3') { e.preventDefault(); onLayerChange('failure'); }
+      if (e.key === '0') { e.preventDefault(); onLayerChange('all'); }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
@@ -327,7 +331,9 @@ function GraphEditor({ graph, domainInfo, domainStyling, onGraphChange, activeLa
     return s;
   }, [nodes]);
 
-  const currentLayerTypes = groupedNodeTypes[activeLayer] || [];
+  const currentLayerTypes = activeLayer === 'all'
+    ? Object.values(groupedNodeTypes).flat()
+    : (groupedNodeTypes[activeLayer] || []);
 
   return (
     <div className="graph-editor">
