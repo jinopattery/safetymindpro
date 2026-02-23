@@ -72,14 +72,6 @@ const TrashIcon = () => (
   </svg>
 );
 
-const BackIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-    stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-    width="14" height="14">
-    <polyline points="15 18 9 12 15 6"/>
-  </svg>
-);
-
 const LogoutIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
     stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
@@ -96,6 +88,15 @@ const FileIcon = () => (
     width="13" height="13">
     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
     <polyline points="14 2 14 8 20 8"/>
+  </svg>
+);
+
+const HomeIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+    width="15" height="15">
+    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+    <polyline points="9 22 9 12 15 12 15 22"/>
   </svg>
 );
 
@@ -137,14 +138,84 @@ function buildHierarchyTree(graph) {
   return { rootForms, formChildren, formFunctions, formFailures, funcChildren, failChildren, nodeMap, orphanFunctions, orphanFailures };
 }
 
-function HierarchyExplorer({ graph, onNodeSelect, selectedNodeId }) {
+// Edge type rules for hierarchy (mirrors GraphEditor's HIERARCHY_RULES)
+const HTREE_EDGE_RULES = [
+  { src: 'form',     tgt: 'form',     edgeType: 'form_hierarchy' },
+  { src: 'form',     tgt: 'function', edgeType: 'performs_function' },
+  { src: 'form',     tgt: 'failure',  edgeType: 'has_failure' },
+  { src: 'function', tgt: 'function', edgeType: 'function_flow' },
+  { src: 'failure',  tgt: 'failure',  edgeType: 'failure_propagation' },
+];
+
+function HierarchyExplorer({ graph, onNodeSelect, selectedNodeId, onNodeRename, onNodeMove }) {
   const [expanded, setExpanded] = useState({});
-  const [panelOpen, setPanelOpen] = useState(true);
+  const [renamingId, setRenamingId] = useState(null);
+  const [renameVal, setRenameVal] = useState('');
+  const [dragOverId, setDragOverId] = useState(null);
+  const renameInputRef = React.useRef(null);
 
   const tree = useMemo(() => buildHierarchyTree(graph), [graph]);
 
   const toggle = (id) => setExpanded(prev => ({ ...prev, [id]: !prev[id] }));
   const isOpen = (id) => expanded[id] !== false; // default open
+
+  const startRename = (e, nodeId, label) => {
+    e.stopPropagation();
+    setRenamingId(nodeId);
+    setRenameVal(label);
+    setTimeout(() => renameInputRef.current?.select(), 0);
+  };
+
+  const commitRename = (nodeId) => {
+    if (renameVal.trim() && onNodeRename) onNodeRename(nodeId, renameVal.trim());
+    setRenamingId(null);
+  };
+
+  const handleDragStart = (e, nodeId) => {
+    e.dataTransfer.setData('htreeNodeId', nodeId);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e, nodeId) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverId(nodeId);
+  };
+
+  const handleDrop = (e, targetId) => {
+    e.preventDefault();
+    setDragOverId(null);
+    const srcId = e.dataTransfer.getData('htreeNodeId');
+    if (!srcId || srcId === targetId) return;
+    const srcNode = tree.nodeMap[srcId];
+    const tgtNode = tree.nodeMap[targetId];
+    if (!srcNode || !tgtNode) return;
+    const rule = HTREE_EDGE_RULES.find(r => r.src === tgtNode.data?.layer && r.tgt === srcNode.data?.layer);
+    if (rule && onNodeMove) onNodeMove(srcId, targetId, rule.edgeType);
+  };
+
+  const renderLabel = (nodeId, label, layerClass) => (
+    renamingId === nodeId ? (
+      <input
+        ref={renameInputRef}
+        className="htree-rename-input"
+        value={renameVal}
+        onChange={e => setRenameVal(e.target.value)}
+        onBlur={() => commitRename(nodeId)}
+        onKeyDown={e => {
+          if (e.key === 'Enter') { e.preventDefault(); commitRename(nodeId); }
+          if (e.key === 'Escape') setRenamingId(null);
+        }}
+        onClick={e => e.stopPropagation()}
+      />
+    ) : (
+      <span
+        className="htree-label"
+        onDoubleClick={e => startRename(e, nodeId, label)}
+        title="Double-click to rename"
+      >{label}</span>
+    )
+  );
 
   const renderFunctions = (functionIds, depth) => functionIds.map(functionId => {
     const fn = tree.nodeMap[functionId];
@@ -154,8 +225,13 @@ function HierarchyExplorer({ graph, onNodeSelect, selectedNodeId }) {
     return (
       <div key={functionId} className="htree-node" style={{ paddingLeft: 10 + depth * 12 }}>
         <div
-          className={`htree-item htree-function${selectedNodeId === functionId ? ' htree-selected' : ''}`}
+          className={`htree-item htree-function${selectedNodeId === functionId ? ' htree-selected' : ''}${dragOverId === functionId ? ' htree-drag-over' : ''}`}
           onClick={() => onNodeSelect && onNodeSelect(functionId)}
+          draggable
+          onDragStart={e => handleDragStart(e, functionId)}
+          onDragOver={e => handleDragOver(e, functionId)}
+          onDragLeave={() => setDragOverId(null)}
+          onDrop={e => handleDrop(e, functionId)}
         >
           {children.length > 0 && (
             <button className="htree-toggle" onClick={e => { e.stopPropagation(); toggle(functionId); }}>
@@ -163,7 +239,7 @@ function HierarchyExplorer({ graph, onNodeSelect, selectedNodeId }) {
             </button>
           )}
           <span className="htree-icon">⚙️</span>
-          <span className="htree-label">{label}</span>
+          {renderLabel(functionId, label, 'htree-function')}
         </div>
         {children.length > 0 && isOpen(functionId) && renderFunctions(children, depth + 1)}
       </div>
@@ -178,8 +254,13 @@ function HierarchyExplorer({ graph, onNodeSelect, selectedNodeId }) {
     return (
       <div key={failureId} className="htree-node" style={{ paddingLeft: 10 + depth * 12 }}>
         <div
-          className={`htree-item htree-failure${selectedNodeId === failureId ? ' htree-selected' : ''}`}
+          className={`htree-item htree-failure${selectedNodeId === failureId ? ' htree-selected' : ''}${dragOverId === failureId ? ' htree-drag-over' : ''}`}
           onClick={() => onNodeSelect && onNodeSelect(failureId)}
+          draggable
+          onDragStart={e => handleDragStart(e, failureId)}
+          onDragOver={e => handleDragOver(e, failureId)}
+          onDragLeave={() => setDragOverId(null)}
+          onDrop={e => handleDrop(e, failureId)}
         >
           {children.length > 0 && (
             <button className="htree-toggle" onClick={e => { e.stopPropagation(); toggle(failureId); }}>
@@ -187,7 +268,7 @@ function HierarchyExplorer({ graph, onNodeSelect, selectedNodeId }) {
             </button>
           )}
           <span className="htree-icon">⚠️</span>
-          <span className="htree-label">{label}</span>
+          {renderLabel(failureId, label, 'htree-failure')}
         </div>
         {children.length > 0 && isOpen(failureId) && renderFailures(children, depth + 1)}
       </div>
@@ -205,8 +286,13 @@ function HierarchyExplorer({ graph, onNodeSelect, selectedNodeId }) {
     return (
       <div key={formId} className="htree-node" style={{ paddingLeft: depth * 12 }}>
         <div
-          className={`htree-item htree-form${selectedNodeId === formId ? ' htree-selected' : ''}`}
+          className={`htree-item htree-form${selectedNodeId === formId ? ' htree-selected' : ''}${dragOverId === formId ? ' htree-drag-over' : ''}`}
           onClick={() => onNodeSelect && onNodeSelect(formId)}
+          draggable
+          onDragStart={e => handleDragStart(e, formId)}
+          onDragOver={e => handleDragOver(e, formId)}
+          onDragLeave={() => setDragOverId(null)}
+          onDrop={e => handleDrop(e, formId)}
         >
           {hasChildren && (
             <button className="htree-toggle" onClick={e => { e.stopPropagation(); toggle(formId); }}>
@@ -214,7 +300,7 @@ function HierarchyExplorer({ graph, onNodeSelect, selectedNodeId }) {
             </button>
           )}
           <span className="htree-icon">🔷</span>
-          <span className="htree-label">{label}</span>
+          {renderLabel(formId, label, 'htree-form')}
         </div>
         {hasChildren && isOpen(formId) && (
           <>
@@ -230,33 +316,21 @@ function HierarchyExplorer({ graph, onNodeSelect, selectedNodeId }) {
   const isEmpty = tree.rootForms.length === 0 && tree.orphanFunctions.length === 0 && tree.orphanFailures.length === 0;
 
   return (
-    <div className="explorer-section">
-      <button
-        className="explorer-section-title"
-        onClick={() => setPanelOpen(o => !o)}
-        aria-expanded={panelOpen}
-      >
-        <span className={`explorer-chevron ${panelOpen ? 'open' : ''}`}>▸</span>
-        FORM · FUNCTION · FAILURE
-      </button>
-      {panelOpen && (
-        <div className="htree-root">
-          {isEmpty && (
-            <div className="explorer-empty">No nodes yet.<br/>Add Form nodes and connect them to Functions and Failures.</div>
-          )}
-          {tree.rootForms.map(f => renderForm(f.id, 0))}
-          {tree.orphanFunctions.length > 0 && (
-            <div className="htree-orphan-section">
-              <div className="htree-orphan-label">Unlinked Functions</div>
-              {renderFunctions(tree.orphanFunctions.map(n => n.id), 0)}
-            </div>
-          )}
-          {tree.orphanFailures.length > 0 && (
-            <div className="htree-orphan-section">
-              <div className="htree-orphan-label">Unlinked Failures</div>
-              {renderFailures(tree.orphanFailures.map(n => n.id), 0)}
-            </div>
-          )}
+    <div className="htree-root">
+      {isEmpty && (
+        <div className="explorer-empty">No nodes yet.<br/>Add Form nodes and connect them to Functions and Failures.</div>
+      )}
+      {tree.rootForms.map(f => renderForm(f.id, 0))}
+      {tree.orphanFunctions.length > 0 && (
+        <div className="htree-orphan-section">
+          <div className="htree-orphan-label">Unlinked Functions</div>
+          {renderFunctions(tree.orphanFunctions.map(n => n.id), 0)}
+        </div>
+      )}
+      {tree.orphanFailures.length > 0 && (
+        <div className="htree-orphan-section">
+          <div className="htree-orphan-label">Unlinked Failures</div>
+          {renderFailures(tree.orphanFailures.map(n => n.id), 0)}
         </div>
       )}
     </div>
@@ -356,6 +430,20 @@ function WorkspacePage({ user, onLogout }) {
   // Sidebar file-explorer: list of all saved graphs
   const [savedGraphs, setSavedGraphs] = useState([]);
   const [explorerOpen, setExplorerOpen] = useState(true);
+
+  // Sidebar tab: 'explorer' | 'hierarchy'
+  const [sidebarTab, setSidebarTab] = useState('explorer');
+
+  // File explorer inline rename
+  const [renamingFileId, setRenamingFileId] = useState(null);
+  const [renameFileVal, setRenameFileVal] = useState('');
+  const renameFileInputRef = React.useRef(null);
+
+  // File explorer drag-and-drop reorder
+  const [draggedFileId, setDraggedFileId] = useState(null);
+
+  // Hierarchy selected node
+  const [selectedNodeId, setSelectedNodeId] = useState(null);
 
   // Algorithm selection for toolbar-middle
   const [selectedAlgorithm, setSelectedAlgorithm] = useState(null);
@@ -598,12 +686,60 @@ function WorkspacePage({ user, onLogout }) {
     trading: '📈'
   };
 
+  // ── File rename handlers ──────────────────────────────────────────
+  const handleRenameFileStart = useCallback((g, e) => {
+    e.stopPropagation();
+    setRenamingFileId(g.id);
+    setRenameFileVal(g.name);
+    setTimeout(() => renameFileInputRef.current?.select(), 0);
+  }, []);
+
+  const handleRenameFileConfirm = useCallback(async (graphId) => {
+    const newName = renameFileVal.trim();
+    setRenamingFileId(null);
+    if (!newName) return;
+    try {
+      await domainsAPI.updateGraph(graphId, graph, newName);
+      setSavedGraphs(prev => prev.map(g => g.id === graphId ? { ...g, name: newName } : g));
+      if (currentGraphId === graphId) setCurrentGraphName(newName);
+    } catch (err) {
+      console.error('Failed to rename diagram:', err);
+    }
+  }, [renameFileVal, graph, currentGraphId]);
+
+  // ── Hierarchy node rename/move handlers ──────────────────────────
+  const handleNodeRename = useCallback((nodeId, newLabel) => {
+    setGraph(prev => ({
+      ...prev,
+      nodes: prev.nodes.map(n => n.id === nodeId ? { ...n, data: { ...n.data, label: newLabel } } : n),
+    }));
+  }, []);
+
+  const handleNodeMove = useCallback((srcId, newParentId, edgeType) => {
+    setGraph(prev => {
+      // Remove all existing edges of this edgeType pointing to srcId.
+      // Each node has at most one parent per edge type in the hierarchy (tree constraint),
+      // so this correctly re-parents the node by replacing its single parent edge.
+      const filteredEdges = prev.edges.filter(e => !(e.target === srcId && e.data?.edgeType === edgeType));
+      const newEdge = {
+        id: `edge-move-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        source: newParentId,
+        target: srcId,
+        type: 'default',
+        data: { edgeType },
+        markerEnd: { type: 'arrowclosed' },
+        style: { stroke: '#94a3b8', strokeWidth: 1.5 },
+      };
+      return { ...prev, edges: [...filteredEdges, newEdge] };
+    });
+  }, []);
+
   return (
     <div className="workspace">
       <header className="workspace-header">
         <div className="workspace-header-left">
-          <button onClick={() => navigate('/dashboard')} className="btn-icon-text" title="Back to Dashboard">
-            <BackIcon /> Dashboard
+          <button onClick={() => navigate('/dashboard')} className="btn-header-icon" title="Dashboard">
+            <HomeIcon />
           </button>
           <span className="app-title">SafetyMindPro</span>
         </div>
@@ -632,70 +768,124 @@ function WorkspacePage({ user, onLogout }) {
         {/* ── File-explorer sidebar (VS Code style) ── */}
         <aside className="workspace-sidebar">
           <div className="explorer-header">
-            <span>EXPLORER</span>
-            <span>HIERARCHY</span>
-          </div>
-          <div className="explorer-section">
             <button
-              className="explorer-section-title"
-              onClick={() => setExplorerOpen(o => !o)}
-              aria-expanded={explorerOpen}
-            >
-              <span className={`explorer-chevron ${explorerOpen ? 'open' : ''}`}>▸</span>
-              SAVED DIAGRAMS
-            </button>
-            {explorerOpen && (
-              <div className="explorer-files">
-                {savedGraphs.length === 0 && (
-                  <div className="explorer-empty">No saved diagrams</div>
-                )}
-                {savedGraphs.map(g => (
-                  <div
-                    key={g.id}
-                    className={`explorer-file${currentGraphId === g.id ? ' active' : ''}`}
-                    onClick={() => handleLoadGraphById(g.id)}
-                    title={`${g.name} · ${g.domain} · ${g.node_count}N ${g.edge_count}E`}
-                  >
-                    <FileIcon />
-                    <span className="explorer-file-name">{g.name}</span>
-                    <span className="explorer-file-domain">{domainIcons[g.domain] || g.domain}</span>
-                    <button
-                      className="explorer-file-delete"
-                      onClick={e => { e.stopPropagation(); handleDeleteGraph(g.id, g.name); }}
-                      title="Delete"
-                      aria-label={`Delete ${g.name}`}
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
+              className={`explorer-tab-btn${sidebarTab === 'explorer' ? ' active' : ''}`}
+              onClick={() => setSidebarTab('explorer')}
+            >EXPLORER</button>
+            <button
+              className={`explorer-tab-btn${sidebarTab === 'hierarchy' ? ' active' : ''}`}
+              onClick={() => setSidebarTab('hierarchy')}
+            >HIERARCHY</button>
           </div>
 
-          {/* Algorithm results shown below the file list */}
-          {algorithmResults && (
-            <div className="explorer-results">
-              <div className="explorer-section-title explorer-section-title--static">
-                ANALYSIS RESULTS
-              </div>
-              <div className="explorer-results-body">
-                {Object.entries(algorithmResults).slice(0, 8).map(([k, v]) => (
-                  <div key={k} className="result-row">
-                    <span className="result-key">{k.replace(/_/g, ' ')}</span>
-                    <span className="result-val">
-                      {typeof v === 'object'
-                        ? (() => { const s = JSON.stringify(v); return s.length > 40 ? s.slice(0, 40) + '…' : s; })()
-                        : String(v)}
-                    </span>
+          {sidebarTab === 'explorer' && (
+            <>
+              <div className="explorer-section">
+                <button
+                  className="explorer-section-title"
+                  onClick={() => setExplorerOpen(o => !o)}
+                  aria-expanded={explorerOpen}
+                >
+                  <span className={`explorer-chevron ${explorerOpen ? 'open' : ''}`}>▸</span>
+                  SAVED DIAGRAMS
+                </button>
+                {explorerOpen && (
+                  <div className="explorer-files">
+                    {savedGraphs.length === 0 && (
+                      <div className="explorer-empty">No saved diagrams</div>
+                    )}
+                    {savedGraphs.map(g => (
+                      <div
+                        key={g.id}
+                        className={`explorer-file${currentGraphId === g.id ? ' active' : ''}${draggedFileId === g.id ? ' dragging' : ''}`}
+                        onClick={() => renamingFileId !== g.id && handleLoadGraphById(g.id)}
+                        title={`${g.name} · ${g.domain} · ${g.node_count}N ${g.edge_count}E`}
+                        draggable
+                        onDragStart={() => setDraggedFileId(g.id)}
+                        onDragOver={e => e.preventDefault()}
+                        onDrop={() => {
+                          if (!draggedFileId || draggedFileId === g.id) return;
+                          setSavedGraphs(prev => {
+                            const src = prev.findIndex(x => x.id === draggedFileId);
+                            const tgt = prev.findIndex(x => x.id === g.id);
+                            const result = [...prev];
+                            const [removed] = result.splice(src, 1);
+                            result.splice(tgt, 0, removed);
+                            return result;
+                          });
+                          setDraggedFileId(null);
+                        }}
+                        onDragEnd={() => setDraggedFileId(null)}
+                      >
+                        <FileIcon />
+                        {renamingFileId === g.id ? (
+                          <input
+                            ref={renameFileInputRef}
+                            className="explorer-file-rename"
+                            value={renameFileVal}
+                            onChange={e => setRenameFileVal(e.target.value)}
+                            onBlur={() => handleRenameFileConfirm(g.id)}
+                            onKeyDown={e => {
+                              if (e.key === 'Enter') { e.preventDefault(); handleRenameFileConfirm(g.id); }
+                              if (e.key === 'Escape') setRenamingFileId(null);
+                            }}
+                            onClick={e => e.stopPropagation()}
+                            autoFocus
+                          />
+                        ) : (
+                          <span
+                            className="explorer-file-name"
+                            onDoubleClick={e => handleRenameFileStart(g, e)}
+                            title="Double-click to rename"
+                          >{g.name}</span>
+                        )}
+                        <span className="explorer-file-domain">{domainIcons[g.domain] || g.domain}</span>
+                        <button
+                          className="explorer-file-delete"
+                          onClick={e => { e.stopPropagation(); handleDeleteGraph(g.id, g.name); }}
+                          title="Delete"
+                          aria-label={`Delete ${g.name}`}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                )}
               </div>
-            </div>
+
+              {/* Algorithm results shown below the file list */}
+              {algorithmResults && (
+                <div className="explorer-results">
+                  <div className="explorer-section-title explorer-section-title--static">
+                    ANALYSIS RESULTS
+                  </div>
+                  <div className="explorer-results-body">
+                    {Object.entries(algorithmResults).slice(0, 8).map(([k, v]) => (
+                      <div key={k} className="result-row">
+                        <span className="result-key">{k.replace(/_/g, ' ')}</span>
+                        <span className="result-val">
+                          {typeof v === 'object'
+                            ? (() => { const s = JSON.stringify(v); return s.length > 40 ? s.slice(0, 40) + '…' : s; })()
+                            : String(v)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
           )}
 
-          {/* ── Hierarchy explorer section ── */}
-          <HierarchyExplorer graph={graph} />
+          {sidebarTab === 'hierarchy' && (
+            <HierarchyExplorer
+              graph={graph}
+              onNodeSelect={setSelectedNodeId}
+              selectedNodeId={selectedNodeId}
+              onNodeRename={handleNodeRename}
+              onNodeMove={handleNodeMove}
+            />
+          )}
         </aside>
 
         <main className="workspace-main">

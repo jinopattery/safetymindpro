@@ -222,3 +222,22 @@
   .layer-tab-count { display: none; }
 }
 
+
+/* ── Editable node ───────────────────────────────────────────────── */
+.editable-node-content {
+  cursor: default;
+  user-select: none;
+}
+
+.editable-node-input {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid #6366f1;
+  outline: none;
+  font-size: inherit;
+  color: inherit;
+  font-family: inherit;
+  width: 100%;
+  padding: 0;
+  cursor: text;
+}
