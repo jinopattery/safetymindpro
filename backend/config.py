@@ -41,6 +41,11 @@ class Settings(BaseSettings):
     smtp_from: str = ""
     app_base_url: str = "http://localhost:3000"
 
+    # Domain isolation: comma-separated list of domain names to expose.
+    # When empty (default) all registered domains are available.
+    # Example: ENABLED_DOMAINS=automotive  or  ENABLED_DOMAINS=finance,financial
+    enabled_domains: str = ""
+
     # GDPR / Privacy
     privacy_policy_version: str = "1.0"
 

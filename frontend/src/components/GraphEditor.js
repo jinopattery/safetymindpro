@@ -204,11 +204,88 @@ function CollapsibleHorizontalTree({ nodes, edges, layer, childEdgeType, accentC
   );
 }
 
-// ── Collapsible All-Layers Grid (with drag-and-drop for unallocated) ──────
+// ── Cascaded Tree Map – grows both vertically and horizontally ─────────────
+//
+// Form nodes are laid out as a horizontal tree (root on the left, children to
+// the right). Each form box also lists its function and failure chip-links
+// inline. The whole canvas auto-sizes to its content so scrolling in both
+// axes is supported without any hard-coded dimensions.
+//
+// Layout constants
+const CTM_NODE_W  = 220;   // form node box width
+const CTM_HDR_H  = 36;    // fixed header height
+const CTM_CHIP_H = 26;    // height allocated per chip row inside a node
+const CTM_CHIPS_PER_ROW = 2;  // chips per row inside a node box
+const CTM_NODE_VPAD = 10;  // bottom padding inside node box
+const CTM_COL_GAP = 72;   // horizontal gap between parent & child columns
+const CTM_ROW_GAP = 16;   // vertical gap between sibling subtrees
 
-function CollapsibleAllLayersGrid({ nodes, edges, domainStyling, setEdges }) {
+function ctmNodeHeight(formId, formFuncs, formFails) {
+  const nf = (formFuncs[formId] || []).length;
+  const na = (formFails[formId] || []).length;
+  if (nf === 0 && na === 0) return CTM_HDR_H + CTM_NODE_VPAD;
+  const rows = Math.ceil(nf / CTM_CHIPS_PER_ROW) + Math.ceil(na / CTM_CHIPS_PER_ROW);
+  return CTM_HDR_H + rows * CTM_CHIP_H + CTM_NODE_VPAD;
+}
+
+function buildCascadedLayout(formNodes, formKids, formFuncs, formFails, isChildForm, collapsed) {
+  const coords = {};  // id → { x, y, h }
+  let nextY = 0;
+
+  const roots = formNodes.filter(n => !isChildForm.has(n.id));
+
+  function measure(nodeId, col) {
+    const h = ctmNodeHeight(nodeId, formFuncs, formFails);
+    const x = col * (CTM_NODE_W + CTM_COL_GAP);
+    const kids = collapsed[nodeId] ? [] : (formKids[nodeId] || []);
+
+    if (kids.length === 0) {
+      const y = nextY;
+      coords[nodeId] = { x, y, h };
+      nextY += h + CTM_ROW_GAP;
+      return y + h / 2;   // vertical midpoint
+    }
+
+    // Lay out children first, then center parent on their span
+    const mids = kids.map(cid => measure(cid, col + 1));
+    const spanMid = (mids[0] + mids[mids.length - 1]) / 2;
+    coords[nodeId] = { x, y: spanMid - h / 2, h };
+    return spanMid;
+  }
+
+  roots.forEach(r => measure(r.id, 0));
+
+  // Orphan form nodes not reachable from any root
+  formNodes.forEach(n => {
+    if (!coords[n.id]) {
+      const h = ctmNodeHeight(n.id, formFuncs, formFails);
+      coords[n.id] = { x: 0, y: nextY, h };
+      nextY += h + CTM_ROW_GAP;
+    }
+  });
+
+  const allCoords = Object.values(coords);
+  const minY = allCoords.length ? Math.min(...allCoords.map(c => c.y)) : 0;
+  const maxX = allCoords.length ? Math.max(...allCoords.map(c => c.x)) : 0;
+  const maxY = allCoords.length ? Math.max(...allCoords.map(c => c.y + c.h)) : 200;
+
+  // Normalise so top-left is (0,0) — only one pass needed since allCoords
+  // holds references to the same objects stored in coords.
+  if (minY < 0) {
+    allCoords.forEach(c => { c.y -= minY; });
+  }
+
+  return {
+    coords,
+    roots,
+    totalW: maxX + CTM_NODE_W + 60,
+    totalH: (maxY - Math.min(minY, 0)) + 40,
+  };
+}
+
+function CascadedTreeMap({ nodes, edges, domainStyling, setEdges }) {
   const [collapsed, setCollapsed] = React.useState({});
-  const [dragOver, setDragOver] = React.useState(null);
+  const [dragOver, setDragOver]   = React.useState(null);
 
   const nodeMap = React.useMemo(() => {
     const m = {};
@@ -228,9 +305,9 @@ function CollapsibleAllLayersGrid({ nodes, edges, domainStyling, setEdges }) {
       return { formFuncs: ff, formFails: fa, formKids: fk, isChildForm: icf, linkedFuncIds: lfi, linkedFailIds: lai };
     }, [edges]);
 
-  const rootForms = React.useMemo(
-    () => nodes.filter(n => n.data?.layer === 'form' && !isChildForm.has(n.id)),
-    [nodes, isChildForm]
+  const formNodes = React.useMemo(
+    () => nodes.filter(n => n.data?.layer === 'form'),
+    [nodes]
   );
 
   const unallocated = React.useMemo(() => ({
@@ -238,9 +315,13 @@ function CollapsibleAllLayersGrid({ nodes, edges, domainStyling, setEdges }) {
     failures:  nodes.filter(n => n.data?.layer === 'failure'  && !linkedFailIds.has(n.id)),
   }), [nodes, linkedFuncIds, linkedFailIds]);
 
+  const { coords, roots, totalW, totalH } = React.useMemo(
+    () => buildCascadedLayout(formNodes, formKids, formFuncs, formFails, isChildForm, collapsed),
+    [formNodes, formKids, formFuncs, formFails, isChildForm, collapsed]
+  );
+
   const toggle = React.useCallback(
-    id => setCollapsed(prev => ({ ...prev, [id]: !prev[id] })),
-    []
+    id => setCollapsed(prev => ({ ...prev, [id]: !prev[id] })), []
   );
 
   const handleDrop = React.useCallback((formId, e) => {
@@ -267,102 +348,148 @@ function CollapsibleAllLayersGrid({ nodes, edges, domainStyling, setEdges }) {
   const failColor = domainStyling?.theme?.failureLayerColor || '#ef4444';
   const formColor = domainStyling?.theme?.formLayerColor    || '#3b82f6';
 
-  const renderForm = (formId, depth) => {
-    const form = nodeMap[formId];
-    if (!form) return null;
-    const funcs    = formFuncs[formId] || [];
-    const fails    = formFails[formId] || [];
-    const children = formKids[formId]  || [];
-    const isCol    = collapsed[formId];
-    const isTarget = dragOver === formId;
+  // Build SVG connector edges for parent→child form links
+  const svgEdges = React.useMemo(() => {
+    const lines = [];
+    const visited = new Set();
+    function collect(nodeId) {
+      if (collapsed[nodeId]) return;
+      (formKids[nodeId] || []).forEach(cid => {
+        if (!coords[nodeId] || !coords[cid]) return;
+        lines.push({ from: nodeId, to: cid });
+        if (!visited.has(cid)) { visited.add(cid); collect(cid); }
+      });
+    }
+    roots.forEach(r => collect(r.id));
+    return lines;
+  }, [roots, formKids, coords, collapsed]);
 
+  if (formNodes.length === 0) {
     return (
-      <div
-        key={formId}
-        className={`callgrid-form callgrid-form-d${Math.min(depth, 3)}${isTarget ? ' callgrid-drag-over' : ''}`}
-        onDragOver={e => { e.preventDefault(); setDragOver(formId); }}
-        onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget)) setDragOver(null); }}
-        onDrop={e => handleDrop(formId, e)}
-      >
-        <div className="callgrid-form-header" style={{ borderLeftColor: formColor }}>
-          <span className="callgrid-form-label">{form.data?.label}</span>
-          <div className="callgrid-badges">
-            {funcs.length > 0 && (
-              <span className="callgrid-badge"
-                style={{ background: funcColor + '22', color: funcColor, borderColor: funcColor }}>
-                {funcs.length} fn
-              </span>
-            )}
-            {fails.length > 0 && (
-              <span className="callgrid-badge"
-                style={{ background: failColor + '22', color: failColor, borderColor: failColor }}>
-                {fails.length} fail
-              </span>
-            )}
-          </div>
-          <button className="cfgrid-toggle-btn" onClick={() => toggle(formId)}
-            title={isCol ? 'Expand' : 'Collapse'}>
-            {isCol ? '+' : '−'}
-          </button>
-        </div>
-        {!isCol && (
-          <div className="callgrid-form-body">
-            {funcs.map(fid => nodeMap[fid] && (
-              <span key={fid} className="callgrid-chip callgrid-chip-func"
-                style={{ borderColor: funcColor }} title={nodeMap[fid].data?.label}>
-                {nodeMap[fid].data?.label}
-              </span>
-            ))}
-            {fails.map(fid => nodeMap[fid] && (
-              <span key={fid} className="callgrid-chip callgrid-chip-fail"
-                style={{ borderColor: failColor }} title={nodeMap[fid].data?.label}>
-                {nodeMap[fid].data?.label}
-              </span>
-            ))}
-            {children.length > 0 && (
-              <div className="callgrid-children">
-                {children.map(cid => renderForm(cid, depth + 1))}
-              </div>
-            )}
-          </div>
-        )}
+      <div className="ctmap-wrap">
+        <div className="chtree-empty-msg">No form nodes yet. Add nodes from the toolbar above.</div>
       </div>
     );
-  };
-
-  const hasUnallocated = unallocated.functions.length > 0 || unallocated.failures.length > 0;
+  }
 
   return (
-    <div className="callgrid-wrap">
-      <div className="callgrid-grid">
-        {rootForms.length === 0
-          ? <div className="chtree-empty-msg">No form nodes yet. Add nodes from the toolbar above.</div>
-          : rootForms.map(f => renderForm(f.id, 0))
-        }
+    <div className="ctmap-wrap">
+      {/* Scrollable canvas */}
+      <div className="ctmap-scroll">
+        <div className="ctmap-canvas" style={{ width: totalW, height: totalH }}>
+          {/* SVG connector lines between parent and child forms */}
+          <svg className="ctmap-svg" width={totalW} height={totalH}>
+            {svgEdges.map(({ from, to }) => {
+              const p = coords[from];
+              const c = coords[to];
+              if (!p || !c) return null;
+              const px = p.x + CTM_NODE_W;
+              const py = p.y + p.h / 2;
+              const cx = c.x;
+              const cy = c.y + c.h / 2;
+              const mx = (px + cx) / 2;
+              return (
+                <path
+                  key={`${from}-${to}`}
+                  d={`M${px},${py} C${mx},${py} ${mx},${cy} ${cx},${cy}`}
+                  fill="none"
+                  stroke="#cbd5e1"
+                  strokeWidth="1.5"
+                />
+              );
+            })}
+          </svg>
+
+          {/* Form node boxes */}
+          {formNodes.map(n => {
+            const pos = coords[n.id];
+            if (!pos) return null;
+            const kids  = formKids[n.id]  || [];
+            const funcs = formFuncs[n.id] || [];
+            const fails = formFails[n.id] || [];
+            const isCol   = !!collapsed[n.id];
+            const isTarget = dragOver === n.id;
+
+            return (
+              <div
+                key={n.id}
+                className={`ctmap-node${isTarget ? ' ctmap-drag-over' : ''}`}
+                style={{ left: pos.x, top: pos.y, width: CTM_NODE_W, minHeight: pos.h,
+                         borderLeftColor: formColor }}
+                onDragOver={e => { e.preventDefault(); setDragOver(n.id); }}
+                onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget)) setDragOver(null); }}
+                onDrop={e => handleDrop(n.id, e)}
+              >
+                {/* Header row */}
+                <div className="ctmap-node-header">
+                  <span className="ctmap-node-label" title={n.data?.label}>{n.data?.label}</span>
+                  <div className="ctmap-badges">
+                    {funcs.length > 0 && (
+                      <span className="ctmap-badge"
+                        style={{ background: funcColor + '22', color: funcColor, borderColor: funcColor }}>
+                        {funcs.length} fn
+                      </span>
+                    )}
+                    {fails.length > 0 && (
+                      <span className="ctmap-badge"
+                        style={{ background: failColor + '22', color: failColor, borderColor: failColor }}>
+                        {fails.length} fail
+                      </span>
+                    )}
+                  </div>
+                  {(kids.length > 0 || funcs.length > 0 || fails.length > 0) && (
+                    <button className="ctmap-toggle" onClick={() => toggle(n.id)}
+                      title={isCol ? 'Expand' : 'Collapse'}>
+                      {isCol ? '+' : '−'}
+                    </button>
+                  )}
+                </div>
+
+                {/* Chip rows when expanded */}
+                {!isCol && (funcs.length > 0 || fails.length > 0) && (
+                  <div className="ctmap-chips">
+                    {funcs.map(fid => nodeMap[fid] && (
+                      <span key={fid} className="ctmap-chip ctmap-chip-func"
+                        style={{ borderColor: funcColor }} title={nodeMap[fid].data?.label}>
+                        {nodeMap[fid].data?.label}
+                      </span>
+                    ))}
+                    {fails.map(fid => nodeMap[fid] && (
+                      <span key={fid} className="ctmap-chip ctmap-chip-fail"
+                        style={{ borderColor: failColor }} title={nodeMap[fid].data?.label}>
+                        {nodeMap[fid].data?.label}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
-      {hasUnallocated && (
-        <div className="callgrid-unallocated">
-          <div className="callgrid-unallocated-header">Unallocated — drag into a form ↑</div>
-          <div className="callgrid-unallocated-items">
+
+      {/* Unallocated nodes tray */}
+      {(unallocated.functions.length > 0 || unallocated.failures.length > 0) && (
+        <div className="ctmap-unallocated">
+          <div className="ctmap-unallocated-header">Unallocated — drag into a form above</div>
+          <div className="ctmap-unallocated-items">
             {unallocated.functions.map(n => (
               <div key={n.id}
-                className="callgrid-chip callgrid-chip-func callgrid-chip-draggable"
+                className="ctmap-chip ctmap-chip-func ctmap-chip-draggable"
                 style={{ borderColor: funcColor }}
                 draggable
                 onDragStart={e => e.dataTransfer.setData('text/plain', JSON.stringify({ id: n.id, layer: 'function' }))}
-                title={`Drag to assign function: ${n.data?.label}`}
-              >
+                title={`Drag to assign: ${n.data?.label}`}>
                 {n.data?.label}
               </div>
             ))}
             {unallocated.failures.map(n => (
               <div key={n.id}
-                className="callgrid-chip callgrid-chip-fail callgrid-chip-draggable"
+                className="ctmap-chip ctmap-chip-fail ctmap-chip-draggable"
                 style={{ borderColor: failColor }}
                 draggable
                 onDragStart={e => e.dataTransfer.setData('text/plain', JSON.stringify({ id: n.id, layer: 'failure' }))}
-                title={`Drag to assign failure: ${n.data?.label}`}
-              >
+                title={`Drag to assign: ${n.data?.label}`}>
                 {n.data?.label}
               </div>
             ))}
@@ -653,7 +780,7 @@ function GraphEditor({ graph, domainInfo, domainStyling, onGraphChange, activeLa
                 accentColor={domainStyling?.theme?.formLayerColor || '#3b82f6'}
               />
             ) : (
-              <CollapsibleAllLayersGrid
+              <CascadedTreeMap
                 nodes={nodes}
                 edges={edges}
                 domainStyling={domainStyling}

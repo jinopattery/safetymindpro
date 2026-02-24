@@ -535,9 +535,16 @@ function WorkspacePage({ user, onLogout }) {
   const loadDomains = useCallback(async () => {
     try {
       const data = await domainsAPI.getDomains();
-      setDomains(data);
-      if (!selectedDomain && data.length > 0) {
-        setSelectedDomain(data[0].name);
+      // Optionally filter by REACT_APP_ENABLED_DOMAINS (build-time domain isolation).
+      // Set REACT_APP_ENABLED_DOMAINS=automotive in .env for an automotive-only build.
+      const envFilter = process.env.REACT_APP_ENABLED_DOMAINS;
+      const allowed = envFilter
+        ? new Set(envFilter.split(',').map(d => d.trim()).filter(Boolean))
+        : null;
+      const filtered = allowed ? data.filter(d => allowed.has(d.name)) : data;
+      setDomains(filtered);
+      if (!selectedDomain && filtered.length > 0) {
+        setSelectedDomain(filtered[0].name);
       }
     } catch (error) {
       console.error('Failed to load domains:', error);
