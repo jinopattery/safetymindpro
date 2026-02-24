@@ -495,7 +495,27 @@ function WorkspacePage({ user, onLogout }) {
   const [explorerOpen, setExplorerOpen] = useState(true);
 
   // Sidebar tab: 'explorer' | 'hierarchy'
-  const [sidebarTab, setSidebarTab] = useState('explorer');
+  const [sidebarTab, setSidebarTab] = useState('hierarchy');
+
+  // Resizable sidebar
+  const [sidebarWidth, setSidebarWidth] = useState(240);
+  const sidebarDragRef = React.useRef({ dragging: false, startX: 0, startW: 0 });
+  const handleSidebarResizeStart = useCallback((e) => {
+    e.preventDefault();
+    sidebarDragRef.current = { dragging: true, startX: e.clientX, startW: sidebarWidth };
+    const onMove = (ev) => {
+      if (!sidebarDragRef.current.dragging) return;
+      const delta = ev.clientX - sidebarDragRef.current.startX;
+      setSidebarWidth(Math.max(150, Math.min(480, sidebarDragRef.current.startW + delta)));
+    };
+    const onUp = () => {
+      sidebarDragRef.current.dragging = false;
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }, [sidebarWidth]);
 
   // File explorer inline rename
   const [renamingFileId, setRenamingFileId] = useState(null);
@@ -816,7 +836,7 @@ function WorkspacePage({ user, onLogout }) {
 
       <div className="workspace-container">
         {/* ── File-explorer sidebar (VS Code style) ── */}
-        <aside className="workspace-sidebar">
+        <aside className="workspace-sidebar" style={{ width: sidebarWidth }}>
           <div className="explorer-header">
             <button
               className={`explorer-tab-btn${sidebarTab === 'explorer' ? ' active' : ''}`}
@@ -945,6 +965,8 @@ function WorkspacePage({ user, onLogout }) {
             />
           )}
         </aside>
+
+        <div className="sidebar-resize-handle" onMouseDown={handleSidebarResizeStart} title="Drag to resize sidebar" />
 
         <main className="workspace-main">
           <div className="workspace-toolbar">
