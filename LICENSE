@@ -1,3 +1,39 @@
+PROPRIETARY SOFTWARE LICENSE
+
+Copyright (c) 2024 SafetyMindPro. All Rights Reserved.
+
+NOTICE: This software and its source code, documentation, and associated
+files (collectively, the "Software") are the exclusive proprietary property
+of SafetyMindPro and are protected by copyright law and international
+treaties.
+
+RESTRICTIONS: No part of the Software may be copied, reproduced,
+distributed, modified, translated, reverse-engineered, decompiled,
+disassembled, or otherwise used without the prior written permission of
+SafetyMindPro. Unauthorized use, reproduction, or distribution of any part
+of the Software is strictly prohibited and will be prosecuted to the maximum
+extent permitted by law.
+
+PERMITTED USE: This Software is licensed, not sold. A valid license from
+SafetyMindPro is required for any use of this Software. Domain-specific
+builds (e.g., automotive, finance) may only be used in the deployment
+context for which they were licensed. Viewing or accessing code for domains
+outside your licensed scope is not permitted.
+
+NO WARRANTY: THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY
+KIND, EXPRESS OR IMPLIED. SAFETYMINDPRO DISCLAIMS ALL WARRANTIES,
+INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+PARTICULAR PURPOSE, AND NON-INFRINGEMENT.
+
+LIMITATION OF LIABILITY: IN NO EVENT SHALL SAFETYMINDPRO BE LIABLE FOR ANY
+INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES ARISING
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR ITS USE.
+
+For licensing inquiries, contact: licensing@safetymindpro.com
+
+---
+ORIGINAL LICENSE NOTICE (retained for third-party components only)
+
                                  Apache License
                            Version 2.0, January 2004
                         http://www.apache.org/licenses/

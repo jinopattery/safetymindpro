@@ -23,8 +23,25 @@ from backend.algorithms import (
 from backend.database import get_db
 from backend.models import Graph as GraphModel
 from backend.routers.auth import get_current_user
+from backend.config import settings
 
 router = APIRouter(prefix="/api/v1/domains", tags=["domains"])
+
+
+def _allowed_domains() -> set:
+    """Return the set of enabled domain names, or empty set meaning 'all allowed'."""
+    domains_config_str = settings.enabled_domains.strip()
+    if not domains_config_str:
+        return set()
+    return {d.strip() for d in domains_config_str.split(',') if d.strip()}
+
+
+def _filter_domains(domain_names: List[str]) -> List[str]:
+    """Filter a list of domain names to only those that are enabled."""
+    allowed = _allowed_domains()
+    if not allowed:
+        return domain_names
+    return [d for d in domain_names if d in allowed]
 
 
 class DomainInfoResponse(BaseModel):
@@ -64,23 +81,27 @@ class AlgorithmRunResponse(BaseModel):
 @router.get("/", response_model=List[str])
 async def list_domains():
     """
-    List all registered domain names
+    List all registered domain names (filtered by ENABLED_DOMAINS when set)
     
     Returns:
         List of domain names
     """
-    return registry.list_domains()
+    return _filter_domains(registry.list_domains())
 
 
 @router.get("/info", response_model=List[DomainInfoResponse])
 async def get_all_domains_info():
     """
-    Get information about all registered domains
+    Get information about all registered domains (filtered by ENABLED_DOMAINS when set)
     
     Returns:
         List of domain information
     """
-    return registry.get_all_domain_info()
+    all_info = registry.get_all_domain_info()
+    allowed = _allowed_domains()
+    if not allowed:
+        return all_info
+    return [d for d in all_info if d and d.get('name') in allowed]
 
 
 @router.get("/{domain_name}/info", response_model=DomainInfoResponse)
@@ -95,8 +116,11 @@ async def get_domain_info(domain_name: str):
         Domain information
         
     Raises:
-        HTTPException: If domain not found
+        HTTPException: If domain not found or not enabled
     """
+    allowed = _allowed_domains()
+    if allowed and domain_name not in allowed:
+        raise HTTPException(status_code=404, detail=f"Domain '{domain_name}' not found")
     info = registry.get_domain_info(domain_name)
     if not info:
         raise HTTPException(status_code=404, detail=f"Domain '{domain_name}' not found")
@@ -115,8 +139,11 @@ async def get_domain_styling(domain_name: str):
         Styling configuration
         
     Raises:
-        HTTPException: If domain not found
+        HTTPException: If domain not found or not enabled
     """
+    allowed = _allowed_domains()
+    if allowed and domain_name not in allowed:
+        raise HTTPException(status_code=404, detail=f"Domain '{domain_name}' not found")
     config = registry.get_styling_config(domain_name)
     if not config:
         raise HTTPException(status_code=404, detail=f"Domain '{domain_name}' not found")
@@ -140,8 +167,11 @@ async def list_domain_algorithms(domain_name: str):
         List of algorithm information
         
     Raises:
-        HTTPException: If domain not found
+        HTTPException: If domain not found or not enabled
     """
+    allowed = _allowed_domains()
+    if allowed and domain_name not in allowed:
+        raise HTTPException(status_code=404, detail=f"Domain '{domain_name}' not found")
     adapter = registry.get(domain_name)
     if not adapter:
         raise HTTPException(status_code=404, detail=f"Domain '{domain_name}' not found")
