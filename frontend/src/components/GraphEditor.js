@@ -204,88 +204,133 @@ function CollapsibleHorizontalTree({ nodes, edges, layer, childEdgeType, accentC
   );
 }
 
-// ── Cascaded Tree Map – grows both vertically and horizontally ─────────────
+// ── Cascaded Tree Map – All-Layers nested treemap view ────────────────────
 //
-// Form nodes are laid out as a horizontal tree (root on the left, children to
-// the right). Each form box also lists its function and failure chip-links
-// inline. The whole canvas auto-sizes to its content so scrolling in both
-// axes is supported without any hard-coded dimensions.
+// Implements the cascaded / nested treemap concept:
+// https://observablehq.com/@d3/cascaded-treemap
 //
-// Layout constants
-const CTM_NODE_W  = 220;   // form node box width
-const CTM_HDR_H  = 36;    // fixed header height
-const CTM_CHIP_H = 26;    // height allocated per chip row inside a node
-const CTM_CHIPS_PER_ROW = 2;  // chips per row inside a node box
-const CTM_NODE_VPAD = 10;  // bottom padding inside node box
-const CTM_COL_GAP = 72;   // horizontal gap between parent & child columns
-const CTM_ROW_GAP = 16;   // vertical gap between sibling subtrees
+// Each form node is rendered as a space-filling rectangle. Sub-form nodes are
+// tiled as nested rectangles inside their parent's inner area. Function and
+// failure nodes appear as proportionally-sized leaf cells within their owning
+// form's rectangle. The layout alternates horizontal/vertical tiling at each
+// depth level (slice-and-dice), giving a clean cascaded appearance.
 
-function ctmNodeHeight(formId, formFuncs, formFails) {
-  const nf = (formFuncs[formId] || []).length;
-  const na = (formFails[formId] || []).length;
-  if (nf === 0 && na === 0) return CTM_HDR_H + CTM_NODE_VPAD;
-  const rows = Math.ceil(nf / CTM_CHIPS_PER_ROW) + Math.ceil(na / CTM_CHIPS_PER_ROW);
-  return CTM_HDR_H + rows * CTM_CHIP_H + CTM_NODE_VPAD;
+const NTM_HEADER_H    = 22;  // header strip height inside each form rect
+const NTM_PAD         = 3;   // padding between parent edge and children
+const NTM_MIN_LABEL_W = 38;  // minimum rect width to attempt a text label
+const NTM_MIN_LABEL_H = 13;  // minimum rect height to attempt a text label
+
+// Depth-indexed fill / stroke palettes for form nodes (mirrors Observable's
+// cascaded-treemap colour scheme: each depth level gets a distinct hue).
+const NTM_FORM_FILL   = ['#dbeafe', '#ede9fe', '#d1fae5', '#fef3c7', '#fce7f3'];
+const NTM_FORM_STROKE = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ec4899'];
+
+// Compute the leaf-weight of a form sub-tree.  Used to size rectangles so
+// that nodes with more content get proportionally more area.
+function ntmWeight(id, formKids, formFuncs, formFails) {
+  const kids  = formKids[id]  || [];
+  const funcs = formFuncs[id] || [];
+  const fails = formFails[id] || [];
+  const leafCount = funcs.length + fails.length;
+  if (kids.length === 0) return Math.max(1, leafCount);
+  return kids.reduce((s, k) => s + ntmWeight(k, formKids, formFuncs, formFails), 0)
+    + leafCount;
 }
 
-function buildCascadedLayout(formNodes, formKids, formFuncs, formFails, isChildForm, collapsed) {
-  const coords = {};  // id → { x, y, h }
-  let nextY = 0;
-
-  const roots = formNodes.filter(n => !isChildForm.has(n.id));
-
-  function measure(nodeId, col) {
-    const h = ctmNodeHeight(nodeId, formFuncs, formFails);
-    const x = col * (CTM_NODE_W + CTM_COL_GAP);
-    const kids = collapsed[nodeId] ? [] : (formKids[nodeId] || []);
-
-    if (kids.length === 0) {
-      const y = nextY;
-      coords[nodeId] = { x, y, h };
-      nextY += h + CTM_ROW_GAP;
-      return y + h / 2;   // vertical midpoint
-    }
-
-    // Lay out children first, then center parent on their span
-    const mids = kids.map(cid => measure(cid, col + 1));
-    const spanMid = (mids[0] + mids[mids.length - 1]) / 2;
-    coords[nodeId] = { x, y: spanMid - h / 2, h };
-    return spanMid;
+// Tile an array of items (each with a .weight property) into a bounding rect.
+// Uses horizontal slicing when width >= height, vertical otherwise.
+// Each item receives .x, .y, .w, .h.
+function ntmTile(items, x, y, w, h) {
+  if (!items.length || w <= 0 || h <= 0) return;
+  const total = items.reduce((s, i) => s + Math.max(0.001, i.weight), 0);
+  if (w >= h) {
+    let xOff = x;
+    items.forEach(item => {
+      const iw = (Math.max(0.001, item.weight) / total) * w;
+      item.x = xOff; item.y = y; item.w = iw; item.h = h;
+      xOff += iw;
+    });
+  } else {
+    let yOff = y;
+    items.forEach(item => {
+      const ih = (Math.max(0.001, item.weight) / total) * h;
+      item.x = x; item.y = yOff; item.w = w; item.h = ih;
+      yOff += ih;
+    });
   }
+}
 
-  roots.forEach(r => measure(r.id, 0));
-
-  // Orphan form nodes not reachable from any root
-  formNodes.forEach(n => {
-    if (!coords[n.id]) {
-      const h = ctmNodeHeight(n.id, formFuncs, formFails);
-      coords[n.id] = { x: 0, y: nextY, h };
-      nextY += h + CTM_ROW_GAP;
-    }
+// Recursively compute the full layout for a form node and its descendants.
+// Returns an array of render items: { id, type, x, y, w, h, depth, label }.
+function ntmLayout(formId, x, y, w, h, depth, formKids, formFuncs, formFails, nodeMap, result) {
+  result.push({
+    id: formId, type: 'form', x, y, w, h, depth,
+    label: nodeMap[formId]?.data?.label || formId,
   });
 
-  const allCoords = Object.values(coords);
-  const minY = allCoords.length ? Math.min(...allCoords.map(c => c.y)) : 0;
-  const maxX = allCoords.length ? Math.max(...allCoords.map(c => c.x)) : 0;
-  const maxY = allCoords.length ? Math.max(...allCoords.map(c => c.y + c.h)) : 200;
+  const kids  = (formKids[formId]  || []).map(k => ({ id: k, type: 'form',     weight: ntmWeight(k, formKids, formFuncs, formFails) }));
+  const funcs = (formFuncs[formId] || []).map(f => ({ id: f, type: 'function', weight: 1 }));
+  const fails = (formFails[formId] || []).map(f => ({ id: f, type: 'failure',  weight: 1 }));
+  const children = [...kids, ...funcs, ...fails];
 
-  // Normalise so top-left is (0,0) — only one pass needed since allCoords
-  // holds references to the same objects stored in coords.
-  if (minY < 0) {
-    allCoords.forEach(c => { c.y -= minY; });
-  }
+  if (!children.length) return;
 
-  return {
-    coords,
-    roots,
-    totalW: maxX + CTM_NODE_W + 60,
-    totalH: (maxY - Math.min(minY, 0)) + 40,
-  };
+  const innerX = x + NTM_PAD;
+  const innerY = y + NTM_HEADER_H;
+  const innerW = w - 2 * NTM_PAD;
+  const innerH = h - NTM_HEADER_H - NTM_PAD;
+
+  if (innerW < 1 || innerH < 1) return;
+
+  ntmTile(children, innerX, innerY, innerW, innerH);
+
+  // Recurse into sub-form children
+  kids.forEach(k => ntmLayout(k.id, k.x, k.y, k.w, k.h, depth + 1,
+    formKids, formFuncs, formFails, nodeMap, result));
+
+  // Record leaf rects for function / failure nodes
+  [...funcs, ...fails].forEach(item =>
+    result.push({
+      id: item.id, type: item.type,
+      x: item.x, y: item.y, w: item.w, h: item.h, depth,
+      label: nodeMap[item.id]?.data?.label || item.id,
+    })
+  );
+}
+
+// Build the complete layout for all root forms tiled across (canvasW × canvasH).
+function ntmBuildLayout(rootIds, formKids, formFuncs, formFails, nodeMap, canvasW, canvasH) {
+  if (!rootIds.length) return [];
+  const roots = rootIds.map(id => ({
+    id, weight: ntmWeight(id, formKids, formFuncs, formFails),
+  }));
+  ntmTile(roots, 0, 0, canvasW, canvasH);
+  const result = [];
+  roots.forEach(r => ntmLayout(r.id, r.x, r.y, r.w, r.h, 0,
+    formKids, formFuncs, formFails, nodeMap, result));
+  return result;
 }
 
 function CascadedTreeMap({ nodes, edges, domainStyling, setEdges }) {
-  const [collapsed, setCollapsed] = React.useState({});
-  const [dragOver, setDragOver]   = React.useState(null);
+  const containerRef = React.useRef(null);
+  const [size, setSize] = React.useState({ w: 800, h: 500 });
+  const [dragOver, setDragOver] = React.useState(null);
+
+  // Track container dimensions so the SVG always fills available space.
+  React.useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const obs = new ResizeObserver(([entry]) => {
+      const { width, height } = entry.contentRect;
+      if (width > 20 && height > 20)
+        setSize({ w: Math.floor(width), h: Math.floor(height) });
+    });
+    obs.observe(el);
+    const r = el.getBoundingClientRect();
+    if (r.width > 20 && r.height > 20)
+      setSize({ w: Math.floor(r.width), h: Math.floor(r.height) });
+    return () => obs.disconnect();
+  }, []);
 
   const nodeMap = React.useMemo(() => {
     const m = {};
@@ -315,14 +360,18 @@ function CascadedTreeMap({ nodes, edges, domainStyling, setEdges }) {
     failures:  nodes.filter(n => n.data?.layer === 'failure'  && !linkedFailIds.has(n.id)),
   }), [nodes, linkedFuncIds, linkedFailIds]);
 
-  const { coords, roots, totalW, totalH } = React.useMemo(
-    () => buildCascadedLayout(formNodes, formKids, formFuncs, formFails, isChildForm, collapsed),
-    [formNodes, formKids, formFuncs, formFails, isChildForm, collapsed]
-  );
+  const hasUnallocated = unallocated.functions.length > 0 || unallocated.failures.length > 0;
+  const trayH = 56;
+  const svgH = Math.max(200, size.h - (hasUnallocated ? trayH : 0));
 
-  const toggle = React.useCallback(
-    id => setCollapsed(prev => ({ ...prev, [id]: !prev[id] })), []
-  );
+  const layoutItems = React.useMemo(() => {
+    const rootForms = formNodes.filter(n => !isChildForm.has(n.id));
+    return ntmBuildLayout(
+      rootForms.map(n => n.id),
+      formKids, formFuncs, formFails, nodeMap,
+      size.w, svgH
+    );
+  }, [formNodes, formKids, formFuncs, formFails, isChildForm, nodeMap, size.w, svgH]);
 
   const handleDrop = React.useCallback((formId, e) => {
     e.preventDefault();
@@ -344,25 +393,29 @@ function CascadedTreeMap({ nodes, edges, domainStyling, setEdges }) {
     } catch (_) { /* ignore malformed drag data */ }
   }, [setEdges]);
 
-  const funcColor = domainStyling?.theme?.functionLayerColor || '#8b5cf6';
-  const failColor = domainStyling?.theme?.failureLayerColor || '#ef4444';
-  const formColor = domainStyling?.theme?.formLayerColor    || '#3b82f6';
+  // Handle drag-over on the SVG by finding the innermost form rect at cursor.
+  const handleSvgDragOver = React.useCallback((e) => {
+    e.preventDefault();
+    const svgEl = e.currentTarget;
+    const rect  = svgEl.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+    const hit = layoutItems
+      .filter(item => item.type === 'form'
+        && mx >= item.x && mx <= item.x + item.w
+        && my >= item.y && my <= item.y + item.h)
+      .sort((a, b) => (a.w * a.h) - (b.w * b.h))[0];
+    setDragOver(hit ? hit.id : null);
+  }, [layoutItems]);
 
-  // Build SVG connector edges for parent→child form links
-  const svgEdges = React.useMemo(() => {
-    const lines = [];
-    const visited = new Set();
-    function collect(nodeId) {
-      if (collapsed[nodeId]) return;
-      (formKids[nodeId] || []).forEach(cid => {
-        if (!coords[nodeId] || !coords[cid]) return;
-        lines.push({ from: nodeId, to: cid });
-        if (!visited.has(cid)) { visited.add(cid); collect(cid); }
-      });
-    }
-    roots.forEach(r => collect(r.id));
-    return lines;
-  }, [roots, formKids, coords, collapsed]);
+  const handleSvgDrop = React.useCallback((e) => {
+    e.preventDefault();
+    if (dragOver) handleDrop(dragOver, e);
+    setDragOver(null);
+  }, [dragOver, handleDrop]);
+
+  const funcColor = domainStyling?.theme?.functionLayerColor || '#8b5cf6';
+  const failColor = domainStyling?.theme?.failureLayerColor  || '#ef4444';
 
   if (formNodes.length === 0) {
     return (
@@ -373,103 +426,128 @@ function CascadedTreeMap({ nodes, edges, domainStyling, setEdges }) {
   }
 
   return (
-    <div className="ctmap-wrap">
-      {/* Scrollable canvas */}
-      <div className="ctmap-scroll">
-        <div className="ctmap-canvas" style={{ width: totalW, height: totalH }}>
-          {/* SVG connector lines between parent and child forms */}
-          <svg className="ctmap-svg" width={totalW} height={totalH}>
-            {svgEdges.map(({ from, to }) => {
-              const p = coords[from];
-              const c = coords[to];
-              if (!p || !c) return null;
-              const px = p.x + CTM_NODE_W;
-              const py = p.y + p.h / 2;
-              const cx = c.x;
-              const cy = c.y + c.h / 2;
-              const mx = (px + cx) / 2;
+    <div className="ctmap-wrap" style={{ overflow: 'hidden' }}>
+      {/* Scrollable SVG canvas */}
+      <div
+        ref={containerRef}
+        style={{ flex: 1, overflow: 'auto', minHeight: 0 }}
+      >
+        <svg
+          width={size.w}
+          height={svgH}
+          style={{ display: 'block' }}
+          onDragOver={handleSvgDragOver}
+          onDragLeave={() => setDragOver(null)}
+          onDrop={handleSvgDrop}
+        >
+          {layoutItems.map(item => {
+            if (item.w < 1 || item.h < 1) return null;
+            const showLabel = item.w >= NTM_MIN_LABEL_W && item.h >= NTM_MIN_LABEL_H;
+            // Prefix clip-path IDs with node type to guarantee uniqueness across the SVG.
+            const clipId = `ntm-clip-${item.type}-${item.id}`;
+
+            if (item.type === 'form') {
+              const fill   = dragOver === item.id
+                ? '#eef2ff'
+                : NTM_FORM_FILL[item.depth % NTM_FORM_FILL.length];
+              const stroke = dragOver === item.id
+                ? '#6366f1'
+                : NTM_FORM_STROKE[item.depth % NTM_FORM_STROKE.length];
+              const sw = dragOver === item.id ? 2 : 1;
+              const fontSize = Math.max(9, Math.min(12, item.w / 14));
+              // Header strip uses 18% opacity overlay of the stroke colour.
+              const headerFill = `${stroke}2e`;
+
               return (
-                <path
-                  key={`${from}-${to}`}
-                  d={`M${px},${py} C${mx},${py} ${mx},${cy} ${cx},${cy}`}
-                  fill="none"
-                  stroke="#cbd5e1"
-                  strokeWidth="1.5"
-                />
-              );
-            })}
-          </svg>
-
-          {/* Form node boxes */}
-          {formNodes.map(n => {
-            const pos = coords[n.id];
-            if (!pos) return null;
-            const kids  = formKids[n.id]  || [];
-            const funcs = formFuncs[n.id] || [];
-            const fails = formFails[n.id] || [];
-            const isCol   = !!collapsed[n.id];
-            const isTarget = dragOver === n.id;
-
-            return (
-              <div
-                key={n.id}
-                className={`ctmap-node${isTarget ? ' ctmap-drag-over' : ''}`}
-                style={{ left: pos.x, top: pos.y, width: CTM_NODE_W, minHeight: pos.h,
-                         borderLeftColor: formColor }}
-                onDragOver={e => { e.preventDefault(); setDragOver(n.id); }}
-                onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget)) setDragOver(null); }}
-                onDrop={e => handleDrop(n.id, e)}
-              >
-                {/* Header row */}
-                <div className="ctmap-node-header">
-                  <span className="ctmap-node-label" title={n.data?.label}>{n.data?.label}</span>
-                  <div className="ctmap-badges">
-                    {funcs.length > 0 && (
-                      <span className="ctmap-badge"
-                        style={{ background: funcColor + '22', color: funcColor, borderColor: funcColor }}>
-                        {funcs.length} fn
-                      </span>
-                    )}
-                    {fails.length > 0 && (
-                      <span className="ctmap-badge"
-                        style={{ background: failColor + '22', color: failColor, borderColor: failColor }}>
-                        {fails.length} fail
-                      </span>
-                    )}
-                  </div>
-                  {(kids.length > 0 || funcs.length > 0 || fails.length > 0) && (
-                    <button className="ctmap-toggle" onClick={() => toggle(n.id)}
-                      title={isCol ? 'Expand' : 'Collapse'}>
-                      {isCol ? '+' : '−'}
-                    </button>
+                <g key={item.id}>
+                  {/* Background rect */}
+                  <rect
+                    x={item.x} y={item.y}
+                    width={Math.max(0, item.w - 1)}
+                    height={Math.max(0, item.h - 1)}
+                    fill={fill}
+                    stroke={stroke}
+                    strokeWidth={sw}
+                    rx={2}
+                  />
+                  {/* Header colour strip */}
+                  <rect
+                    x={item.x} y={item.y}
+                    width={Math.max(0, item.w - 1)}
+                    height={Math.min(NTM_HEADER_H, Math.max(0, item.h - 1))}
+                    fill={headerFill}
+                    stroke="none"
+                    rx={2}
+                    style={{ pointerEvents: 'none' }}
+                  />
+                  {/* Clip path so the label never overflows the header strip */}
+                  {showLabel && (
+                    <clipPath id={clipId}>
+                      <rect x={item.x + 5} y={item.y} width={Math.max(0, item.w - 10)} height={NTM_HEADER_H} />
+                    </clipPath>
                   )}
-                </div>
+                  {showLabel && (
+                    <text
+                      x={item.x + 5}
+                      y={item.y + NTM_HEADER_H - 6}
+                      fontSize={fontSize}
+                      fontWeight={item.depth === 0 ? 700 : 600}
+                      fill="#1e293b"
+                      clipPath={`url(#${clipId})`}
+                      style={{ pointerEvents: 'none', userSelect: 'none' }}
+                    >
+                      {item.label}
+                    </text>
+                  )}
+                </g>
+              );
+            }
 
-                {/* Chip rows when expanded */}
-                {!isCol && (funcs.length > 0 || fails.length > 0) && (
-                  <div className="ctmap-chips">
-                    {funcs.map(fid => nodeMap[fid] && (
-                      <span key={fid} className="ctmap-chip ctmap-chip-func"
-                        style={{ borderColor: funcColor }} title={nodeMap[fid].data?.label}>
-                        {nodeMap[fid].data?.label}
-                      </span>
-                    ))}
-                    {fails.map(fid => nodeMap[fid] && (
-                      <span key={fid} className="ctmap-chip ctmap-chip-fail"
-                        style={{ borderColor: failColor }} title={nodeMap[fid].data?.label}>
-                        {nodeMap[fid].data?.label}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
+            if (item.type === 'function' || item.type === 'failure') {
+              const color    = item.type === 'function' ? funcColor : failColor;
+              const fontSize = Math.max(8, Math.min(10, item.w / 12));
+              // Leaf fill uses 15% opacity of the accent colour.
+              const leafFill = `${color}26`;
+
+              return (
+                <g key={`${item.type}-${item.id}`}>
+                  <rect
+                    x={item.x + 1} y={item.y + 1}
+                    width={Math.max(0, item.w - 2)}
+                    height={Math.max(0, item.h - 2)}
+                    fill={leafFill}
+                    stroke={color}
+                    strokeWidth={1}
+                    rx={2}
+                  />
+                  {showLabel && (
+                    <>
+                      <clipPath id={clipId}>
+                        <rect x={item.x + 4} y={item.y} width={Math.max(0, item.w - 8)} height={item.h} />
+                      </clipPath>
+                      <text
+                        x={item.x + 4}
+                        y={item.y + item.h / 2 + fontSize / 2 - 1}
+                        fontSize={fontSize}
+                        fill={color}
+                        clipPath={`url(#${clipId})`}
+                        style={{ pointerEvents: 'none', userSelect: 'none' }}
+                      >
+                        {item.label}
+                      </text>
+                    </>
+                  )}
+                </g>
+              );
+            }
+
+            return null;
           })}
-        </div>
+        </svg>
       </div>
 
       {/* Unallocated nodes tray */}
-      {(unallocated.functions.length > 0 || unallocated.failures.length > 0) && (
+      {hasUnallocated && (
         <div className="ctmap-unallocated">
           <div className="ctmap-unallocated-header">Unallocated — drag into a form above</div>
           <div className="ctmap-unallocated-items">
