@@ -119,15 +119,32 @@
 
 /* ── Sidebar ─────────────────────────────────────────────────────── */
 .workspace-sidebar {
-  width: 200px;
   background: #1e2228;
-  border-right: 1px solid #2d3139;
+  border-right: none;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 0;
   flex-shrink: 0;
   color: #cdd6f4;
+  min-width: 150px;
+  max-width: 480px;
+}
+
+/* ── Sidebar resize handle ───────────────────────────────────────── */
+.sidebar-resize-handle {
+  width: 4px;
+  background: #2d3139;
+  cursor: col-resize;
+  flex-shrink: 0;
+  transition: background 0.15s;
+  position: relative;
+  z-index: 10;
+}
+
+.sidebar-resize-handle:hover,
+.sidebar-resize-handle:active {
+  background: #6366f1;
 }
 
 /* ── Hierarchy tree nodes ────────────────────────────────────────── */
@@ -796,7 +813,6 @@
 
 /* ── Responsive ──────────────────────────────────────────────────── */
 @media (max-width: 900px) {
-  .workspace-sidebar { width: 160px; }
   .domain-tab-text { display: none; }
   .algo-select { min-width: 110px; }
 }

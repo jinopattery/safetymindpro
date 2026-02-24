@@ -172,12 +172,89 @@
   flex: 1;
   position: relative;
   min-height: 0;
+  display: flex;
+  overflow: hidden;
 }
 
-.graph-canvas--form     .react-flow__background { background: rgba(59,130,246,0.03); }
-.graph-canvas--function .react-flow__background { background: rgba(139,92,246,0.03); }
-.graph-canvas--failure  .react-flow__background { background: rgba(239,68,68,0.03); }
-.graph-canvas--all      .react-flow__background { background: rgba(99,102,241,0.03); }
+/* ── Canvas scroll outer ──────────────────────────────────────── */
+.canvas-scroll-outer {
+  flex: 1;
+  overflow: auto;
+  min-height: 0;
+}
+
+/* ── Canvas zoom scaler ───────────────────────────────────────── */
+.canvas-zoom-scaler {
+  display: flex;
+  flex-direction: column;
+}
+
+.canvas-zoom-scaler > * {
+  flex: 1;
+  min-height: 400px;
+}
+
+/* ── Zoom controls – left side of canvas ────────────────────── */
+.canvas-zoom-controls {
+  position: absolute;
+  left: 10px;
+  bottom: 16px;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+}
+
+.canvas-zoom-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+  cursor: pointer;
+  font-size: 1rem;
+  color: #475569;
+  padding: 0;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+  user-select: none;
+}
+
+.canvas-zoom-btn:hover:not(:disabled) {
+  background: #f1f5f9;
+  border-color: #6366f1;
+  color: #4f46e5;
+}
+
+.canvas-zoom-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.canvas-zoom-pct {
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-family: 'SF Mono', 'Fira Mono', monospace;
+  letter-spacing: -0.02em;
+  min-width: 38px;
+  height: 26px;
+}
+
+.canvas-zoom-locked {
+  background: #fef3c7;
+  border-color: #fcd34d;
+  color: #92400e;
+}
+
+.canvas-zoom-locked:hover:not(:disabled) {
+  background: #fef3c7;
+  border-color: #f59e0b;
+  color: #78350f;
+}
 
 /* ── Layer stats panel ──────────────────────────────────────────── */
 .layer-stats-panel {
@@ -246,10 +323,9 @@
 /* ── Collapsible Horizontal Tree (Function / Failure layer views) ───── */
 .chtree-wrap {
   flex: 1;
-  overflow: auto;
   background: #f8fafc;
   padding: 24px 32px;
-  min-height: 0;
+  min-height: 400px;
 }
 
 .chtree-svg-layer {
@@ -338,10 +414,9 @@
 /* ── Collapsible Form Grid (Form layer view) ─────────────────────────────── */
 .cfgrid-wrap {
   flex: 1;
-  overflow: auto;
   background: #f8fafc;
   padding: 20px 24px;
-  min-height: 0;
+  min-height: 400px;
 }
 
 .cfgrid-grid {
@@ -415,10 +490,9 @@
 /* ── Collapsible All-Layers Grid ─────────────────────────────────────────── */
 .callgrid-wrap {
   flex: 1;
-  overflow: auto;
   background: #f8fafc;
   padding: 16px 20px;
-  min-height: 0;
+  min-height: 400px;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -525,10 +599,13 @@
   opacity: 0.7;
 }
 
+/* Children expand towards the right (horizontal), matching the horizontal
+   tree pattern used in form/function/failure layer views */
 .callgrid-children {
   width: 100%;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  flex-wrap: wrap;
   gap: 6px;
   margin-top: 4px;
 }

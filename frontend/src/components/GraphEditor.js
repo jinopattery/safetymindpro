@@ -204,97 +204,6 @@ function CollapsibleHorizontalTree({ nodes, edges, layer, childEdgeType, accentC
   );
 }
 
-// ── Collapsible Form Grid (Form layer view) ───────────────────────────────
-
-function CollapsibleFormGrid({ nodes, edges, domainStyling }) {
-  const [collapsed, setCollapsed] = React.useState({});
-
-  const formNodes = React.useMemo(
-    () => nodes.filter(n => n.data?.layer === 'form'),
-    [nodes]
-  );
-
-  const { childMap, isChildForm } = React.useMemo(() => {
-    const cm = {};
-    const icf = new Set();
-    edges.forEach(e => {
-      if (e.data?.edgeType === 'form_hierarchy') {
-        if (!cm[e.source]) cm[e.source] = [];
-        cm[e.source].push(e.target);
-        icf.add(e.target);
-      }
-    });
-    return { childMap: cm, isChildForm: icf };
-  }, [edges]);
-
-  const rootForms = React.useMemo(
-    () => formNodes.filter(n => !isChildForm.has(n.id)),
-    [formNodes, isChildForm]
-  );
-
-  const nodeMap = React.useMemo(() => {
-    const m = {};
-    nodes.forEach(n => { m[n.id] = n; });
-    return m;
-  }, [nodes]);
-
-  const toggle = React.useCallback(
-    id => setCollapsed(prev => ({ ...prev, [id]: !prev[id] })),
-    []
-  );
-
-  const accentColor = domainStyling?.theme?.formLayerColor || '#3b82f6';
-
-  const renderForm = (formId, depth) => {
-    const form = nodeMap[formId];
-    if (!form) return null;
-    const children = childMap[formId] || [];
-    const isCol = collapsed[formId];
-    return (
-      <div key={formId}
-        className={`cfgrid-card cfgrid-card-d${Math.min(depth, 3)}`}
-        style={{ borderLeftColor: accentColor }}
-      >
-        <div className="cfgrid-card-header">
-          <span className="cfgrid-card-label" title={form.data?.label}>{form.data?.label}</span>
-          {children.length > 0 && (
-            <button
-              className="cfgrid-toggle-btn"
-              onClick={() => toggle(formId)}
-              title={isCol ? 'Expand sub-forms' : 'Collapse sub-forms'}
-            >
-              {isCol ? `+${children.length}` : '−'}
-            </button>
-          )}
-        </div>
-        {!isCol && children.length > 0 && (
-          <div className="cfgrid-children">
-            {children.map(cid => renderForm(cid, depth + 1))}
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  if (formNodes.length === 0) {
-    return (
-      <div className="chtree-wrap">
-        <div className="chtree-empty-msg">
-          No form nodes yet. Add nodes from the toolbar above.
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="cfgrid-wrap">
-      <div className="cfgrid-grid">
-        {rootForms.map(f => renderForm(f.id, 0))}
-      </div>
-    </div>
-  );
-}
-
 // ── Collapsible All-Layers Grid (with drag-and-drop for unallocated) ──────
 
 function CollapsibleAllLayersGrid({ nodes, edges, domainStyling, setEdges }) {
@@ -471,6 +380,8 @@ function GraphEditor({ graph, domainInfo, domainStyling, onGraphChange, activeLa
   const [selectedNodeType, setSelectedNodeType] = useState(null);
   const [nodeLabel, setNodeLabel] = useState('');
   const [validationError, setValidationError] = useState('');
+  const [zoom, setZoom] = useState(1.0);
+  const [zoomLocked, setZoomLocked] = useState(false);
   const updateTimeoutRef = useRef(null);
   const labelInputRef = useRef(null);
   const nodeSelectRef = useRef(null);
@@ -524,6 +435,27 @@ function GraphEditor({ graph, domainInfo, domainStyling, onGraphChange, activeLa
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [onLayerChange]);
+
+  // Zoom keyboard shortcuts: Ctrl+= zoom in, Ctrl+- zoom out, Ctrl+0 reset
+  useEffect(() => {
+    const handler = (e) => {
+      if (!(e.ctrlKey || e.metaKey)) return;
+      if (e.key === '=' || e.key === '+') {
+        e.preventDefault();
+        setZoom(z => zoomLocked ? z : +(Math.min(2.0, z + 0.25)).toFixed(2));
+      }
+      if (e.key === '-') {
+        e.preventDefault();
+        setZoom(z => zoomLocked ? z : +(Math.max(0.25, z - 0.25)).toFixed(2));
+      }
+      if (e.key === '0') {
+        e.preventDefault();
+        if (!zoomLocked) setZoom(1.0);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [zoomLocked]);
 
   const getNodeStyle = (nodeType) => {
     if (!domainStyling?.node_styles) return {};
@@ -606,6 +538,10 @@ function GraphEditor({ graph, domainInfo, domainStyling, onGraphChange, activeLa
     ? Object.values(groupedNodeTypes).flat()
     : (groupedNodeTypes[activeLayer] || []);
 
+  const zoomIn    = () => setZoom(z => zoomLocked ? z : +(Math.min(2.0, z + 0.25)).toFixed(2));
+  const zoomOut   = () => setZoom(z => zoomLocked ? z : +(Math.max(0.25, z - 0.25)).toFixed(2));
+  const zoomReset = () => { if (!zoomLocked) setZoom(1.0); };
+
   return (
     <div className="graph-editor">
       {/* Compact add-node toolbar */}
@@ -656,37 +592,77 @@ function GraphEditor({ graph, domainInfo, domainStyling, onGraphChange, activeLa
         </span>
       </div>
 
-      {/* Canvas – varies by layer */}
-      {activeLayer === 'function' ? (
-        <CollapsibleHorizontalTree
-          nodes={nodes}
-          edges={edges}
-          layer="function"
-          childEdgeType="function_flow"
-          accentColor={domainStyling?.theme?.functionLayerColor || '#8b5cf6'}
-        />
-      ) : activeLayer === 'failure' ? (
-        <CollapsibleHorizontalTree
-          nodes={nodes}
-          edges={edges}
-          layer="failure"
-          childEdgeType="failure_propagation"
-          accentColor={domainStyling?.theme?.failureLayerColor || '#ef4444'}
-        />
-      ) : activeLayer === 'form' ? (
-        <CollapsibleFormGrid
-          nodes={nodes}
-          edges={edges}
-          domainStyling={domainStyling}
-        />
-      ) : (
-        <CollapsibleAllLayersGrid
-          nodes={nodes}
-          edges={edges}
-          domainStyling={domainStyling}
-          setEdges={setEdges}
-        />
-      )}
+      {/* Canvas – varies by layer, with zoom controls overlay */}
+      <div className="graph-canvas">
+        {/* Zoom controls – left side of canvas */}
+        <div className="canvas-zoom-controls">
+          <button
+            className="canvas-zoom-btn"
+            onClick={zoomIn}
+            disabled={zoomLocked || zoom >= 2.0}
+            title="Zoom in (Ctrl++)"
+            aria-label="Zoom in"
+          >＋</button>
+          <button
+            className="canvas-zoom-btn canvas-zoom-pct"
+            onClick={zoomReset}
+            disabled={zoomLocked}
+            title="Reset zoom (Ctrl+0)"
+            aria-label={`Current zoom ${Math.round(zoom * 100)}%`}
+          >{Math.round(zoom * 100)}%</button>
+          <button
+            className="canvas-zoom-btn"
+            onClick={zoomOut}
+            disabled={zoomLocked || zoom <= 0.25}
+            title="Zoom out (Ctrl+-)"
+            aria-label="Zoom out"
+          >－</button>
+          <button
+            className={`canvas-zoom-btn${zoomLocked ? ' canvas-zoom-locked' : ''}`}
+            onClick={() => setZoomLocked(l => !l)}
+            title={zoomLocked ? 'Unlock zoom' : 'Lock zoom'}
+            aria-label={zoomLocked ? 'Unlock zoom' : 'Lock zoom'}
+          >{zoomLocked ? '🔒' : '🔓'}</button>
+        </div>
+
+        {/* Scrollable + zoomable content area */}
+        <div className="canvas-scroll-outer">
+          <div className="canvas-zoom-scaler" style={{ transform: `scale(${zoom})`, transformOrigin: 'top left', width: `${100 / zoom}%`, minHeight: `${100 / zoom}%` }}>
+            {activeLayer === 'function' ? (
+              <CollapsibleHorizontalTree
+                nodes={nodes}
+                edges={edges}
+                layer="function"
+                childEdgeType="function_flow"
+                accentColor={domainStyling?.theme?.functionLayerColor || '#8b5cf6'}
+              />
+            ) : activeLayer === 'failure' ? (
+              <CollapsibleHorizontalTree
+                nodes={nodes}
+                edges={edges}
+                layer="failure"
+                childEdgeType="failure_propagation"
+                accentColor={domainStyling?.theme?.failureLayerColor || '#ef4444'}
+              />
+            ) : activeLayer === 'form' ? (
+              <CollapsibleHorizontalTree
+                nodes={nodes}
+                edges={edges}
+                layer="form"
+                childEdgeType="form_hierarchy"
+                accentColor={domainStyling?.theme?.formLayerColor || '#3b82f6'}
+              />
+            ) : (
+              <CollapsibleAllLayersGrid
+                nodes={nodes}
+                edges={edges}
+                domainStyling={domainStyling}
+                setEdges={setEdges}
+              />
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
