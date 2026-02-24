@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { domainsAPI } from '../api/domains';
 import GraphEditor from './GraphEditor';
@@ -479,6 +479,9 @@ function WorkspacePage({ user, onLogout }) {
   const [domainStyling, setDomainStyling] = useState(null);
   const [graph, setGraph] = useState({ nodes: [], edges: [] });
   const [algorithmResults, setAlgorithmResults] = useState(null);
+  const [algorithmLog, setAlgorithmLog] = useState([]);
+  const [showConsole, setShowConsole] = useState(false);
+  const consoleOutputRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const [saveStatus, setSaveStatus] = useState('');
   const [saveModalOpen, setSaveModalOpen] = useState(false);
@@ -564,6 +567,13 @@ function WorkspacePage({ user, onLogout }) {
   useEffect(() => { loadDomains(); }, [loadDomains]);
   useEffect(() => { loadSavedGraphs(); }, [loadSavedGraphs]);
 
+  // Scroll console output to bottom whenever new log entries are added.
+  useEffect(() => {
+    if (consoleOutputRef.current) {
+      consoleOutputRef.current.scrollTop = consoleOutputRef.current.scrollHeight;
+    }
+  }, [algorithmLog.length]);
+
   useEffect(() => {
     if (selectedDomain) {
       loadDomainInfo(selectedDomain);
@@ -602,18 +612,43 @@ function WorkspacePage({ user, onLogout }) {
   };
 
   const handleRunAlgorithm = async (algorithmName, params) => {
+    const getTimestamp = () => new Date().toLocaleTimeString();
     setLoading(true);
+    setShowConsole(true);
+    setAlgorithmLog(prev => [
+      ...prev,
+      { type: 'info', message: `▶ Running: ${algorithmName.replace(/_/g, ' ')}`, time: getTimestamp() },
+      ...(Object.keys(params).length > 0
+        ? [{ type: 'info', message: `  Params: ${JSON.stringify(params)}`, time: getTimestamp() }]
+        : []),
+    ]);
     try {
       const result = await domainsAPI.runAlgorithm(selectedDomain, algorithmName, graph, params);
       if (result.success) {
         setAlgorithmResults(result.results);
         if (result.updated_graph) setGraph(result.updated_graph);
+        const entries = result.results ? Object.entries(result.results) : [];
+        setAlgorithmLog(prev => [
+          ...prev,
+          { type: 'success', message: `✓ Completed: ${algorithmName.replace(/_/g, ' ')}`, time: getTimestamp() },
+          ...entries.map(([k, v]) => ({
+            type: 'result',
+            message: `  ${k.replace(/_/g, ' ')}: ${typeof v === 'object' ? JSON.stringify(v) : String(v)}`,
+            time: getTimestamp(),
+          })),
+        ]);
       } else {
-        alert(`Algorithm failed: ${result.error || 'Unknown error'}`);
+        setAlgorithmLog(prev => [
+          ...prev,
+          { type: 'error', message: `✗ Failed: ${result.error || 'Unknown error'}`, time: getTimestamp() },
+        ]);
       }
     } catch (error) {
       console.error('Algorithm error:', error);
-      alert('Failed to run algorithm.');
+      setAlgorithmLog(prev => [
+        ...prev,
+        { type: 'error', message: `✗ Error: ${error.message || 'Failed to run algorithm.'}`, time: getTimestamp() },
+      ]);
     } finally {
       setLoading(false);
     }
@@ -1046,6 +1081,14 @@ function WorkspacePage({ user, onLogout }) {
                   >
                     {loading ? '⏳' : '▶'}
                   </button>
+
+                  <button
+                    onClick={() => setShowConsole(c => !c)}
+                    className={`icon-btn btn-console-toggle${showConsole ? ' active' : ''}`}
+                    title={showConsole ? 'Switch to canvas view' : 'Switch to console view'}
+                  >
+                    {'>_'}
+                  </button>
                 </>
               )}
             </div>
@@ -1086,7 +1129,24 @@ function WorkspacePage({ user, onLogout }) {
             </div>
           </div>
 
-          {domainInfo ? (
+          {showConsole ? (
+            <div className="console-panel">
+              <div className="console-output" ref={consoleOutputRef}>
+                {algorithmLog.length === 0 && (
+                  <span className="console-empty">Run an algorithm to see output here.</span>
+                )}
+                {algorithmLog.map((entry, i) => (
+                  <div key={i} className={`console-line console-line-${entry.type}`}>
+                    <span className="console-time">{entry.time}</span>
+                    <span className="console-msg">{entry.message}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="console-footer">
+                <button className="console-clear-btn" onClick={() => setAlgorithmLog([])}>Clear</button>
+              </div>
+            </div>
+          ) : domainInfo ? (
             <GraphEditor
               graph={graph}
               domainInfo={domainInfo}

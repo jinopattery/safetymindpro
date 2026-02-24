@@ -204,133 +204,22 @@ function CollapsibleHorizontalTree({ nodes, edges, layer, childEdgeType, accentC
   );
 }
 
-// ── Cascaded Tree Map – All-Layers nested treemap view ────────────────────
+// ── All-Layers Collapsible Grid – All-Layers view ────────────────────────
 //
-// Implements the cascaded / nested treemap concept:
-// https://observablehq.com/@d3/cascaded-treemap
-//
-// Each form node is rendered as a space-filling rectangle. Sub-form nodes are
-// tiled as nested rectangles inside their parent's inner area. Function and
-// failure nodes appear as proportionally-sized leaf cells within their owning
-// form's rectangle. The layout alternates horizontal/vertical tiling at each
-// depth level (slice-and-dice), giving a clean cascaded appearance.
+// Replaces the cascaded treemap. Layout rules:
+//  • Forms at the same hierarchical level extend DOWNWARD (vertical stack).
+//  • Child forms extend to the RIGHT of their parent.
+//  • Each form card shows linked function/failure chips inline.
+//  • Unallocated functions/failures appear in a tray at the bottom.
 
-const NTM_HEADER_H    = 22;  // header strip height inside each form rect
-const NTM_PAD         = 3;   // padding between parent edge and children
-const NTM_MIN_LABEL_W = 38;  // minimum rect width to attempt a text label
-const NTM_MIN_LABEL_H = 13;  // minimum rect height to attempt a text label
-
-// Depth-indexed fill / stroke palettes for form nodes (mirrors Observable's
-// cascaded-treemap colour scheme: each depth level gets a distinct hue).
-const NTM_FORM_FILL   = ['#dbeafe', '#ede9fe', '#d1fae5', '#fef3c7', '#fce7f3'];
-const NTM_FORM_STROKE = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ec4899'];
-
-// Compute the leaf-weight of a form sub-tree.  Used to size rectangles so
-// that nodes with more content get proportionally more area.
-function ntmWeight(id, formKids, formFuncs, formFails) {
-  const kids  = formKids[id]  || [];
-  const funcs = formFuncs[id] || [];
-  const fails = formFails[id] || [];
-  const leafCount = funcs.length + fails.length;
-  if (kids.length === 0) return Math.max(1, leafCount);
-  return kids.reduce((s, k) => s + ntmWeight(k, formKids, formFuncs, formFails), 0)
-    + leafCount;
-}
-
-// Tile an array of items (each with a .weight property) into a bounding rect.
-// Uses horizontal slicing when width >= height, vertical otherwise.
-// Each item receives .x, .y, .w, .h.
-function ntmTile(items, x, y, w, h) {
-  if (!items.length || w <= 0 || h <= 0) return;
-  const total = items.reduce((s, i) => s + Math.max(0.001, i.weight), 0);
-  if (w >= h) {
-    let xOff = x;
-    items.forEach(item => {
-      const iw = (Math.max(0.001, item.weight) / total) * w;
-      item.x = xOff; item.y = y; item.w = iw; item.h = h;
-      xOff += iw;
-    });
-  } else {
-    let yOff = y;
-    items.forEach(item => {
-      const ih = (Math.max(0.001, item.weight) / total) * h;
-      item.x = x; item.y = yOff; item.w = w; item.h = ih;
-      yOff += ih;
-    });
-  }
-}
-
-// Recursively compute the full layout for a form node and its descendants.
-// Returns an array of render items: { id, type, x, y, w, h, depth, label }.
-function ntmLayout(formId, x, y, w, h, depth, formKids, formFuncs, formFails, nodeMap, result) {
-  result.push({
-    id: formId, type: 'form', x, y, w, h, depth,
-    label: nodeMap[formId]?.data?.label || formId,
-  });
-
-  const kids  = (formKids[formId]  || []).map(k => ({ id: k, type: 'form',     weight: ntmWeight(k, formKids, formFuncs, formFails) }));
-  const funcs = (formFuncs[formId] || []).map(f => ({ id: f, type: 'function', weight: 1 }));
-  const fails = (formFails[formId] || []).map(f => ({ id: f, type: 'failure',  weight: 1 }));
-  const children = [...kids, ...funcs, ...fails];
-
-  if (!children.length) return;
-
-  const innerX = x + NTM_PAD;
-  const innerY = y + NTM_HEADER_H;
-  const innerW = w - 2 * NTM_PAD;
-  const innerH = h - NTM_HEADER_H - NTM_PAD;
-
-  if (innerW < 1 || innerH < 1) return;
-
-  ntmTile(children, innerX, innerY, innerW, innerH);
-
-  // Recurse into sub-form children
-  kids.forEach(k => ntmLayout(k.id, k.x, k.y, k.w, k.h, depth + 1,
-    formKids, formFuncs, formFails, nodeMap, result));
-
-  // Record leaf rects for function / failure nodes
-  [...funcs, ...fails].forEach(item =>
-    result.push({
-      id: item.id, type: item.type,
-      x: item.x, y: item.y, w: item.w, h: item.h, depth,
-      label: nodeMap[item.id]?.data?.label || item.id,
-    })
-  );
-}
-
-// Build the complete layout for all root forms tiled across (canvasW × canvasH).
-function ntmBuildLayout(rootIds, formKids, formFuncs, formFails, nodeMap, canvasW, canvasH) {
-  if (!rootIds.length) return [];
-  const roots = rootIds.map(id => ({
-    id, weight: ntmWeight(id, formKids, formFuncs, formFails),
-  }));
-  ntmTile(roots, 0, 0, canvasW, canvasH);
-  const result = [];
-  roots.forEach(r => ntmLayout(r.id, r.x, r.y, r.w, r.h, 0,
-    formKids, formFuncs, formFails, nodeMap, result));
-  return result;
-}
-
-function CascadedTreeMap({ nodes, edges, domainStyling, setEdges }) {
-  const containerRef = React.useRef(null);
-  const [size, setSize] = React.useState({ w: 800, h: 500 });
+function AllLayersCollapsibleGrid({ nodes, edges, domainStyling, setEdges }) {
+  const [collapsed, setCollapsed] = React.useState({});
   const [dragOver, setDragOver] = React.useState(null);
 
-  // Track container dimensions so the SVG always fills available space.
-  React.useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const obs = new ResizeObserver(([entry]) => {
-      const { width, height } = entry.contentRect;
-      if (width > 20 && height > 20)
-        setSize({ w: Math.floor(width), h: Math.floor(height) });
-    });
-    obs.observe(el);
-    const r = el.getBoundingClientRect();
-    if (r.width > 20 && r.height > 20)
-      setSize({ w: Math.floor(r.width), h: Math.floor(r.height) });
-    return () => obs.disconnect();
-  }, []);
+  const toggle = React.useCallback(
+    id => setCollapsed(prev => ({ ...prev, [id]: !prev[id] })),
+    []
+  );
 
   const nodeMap = React.useMemo(() => {
     const m = {};
@@ -355,219 +244,187 @@ function CascadedTreeMap({ nodes, edges, domainStyling, setEdges }) {
     [nodes]
   );
 
+  const rootForms = React.useMemo(
+    () => formNodes.filter(n => !isChildForm.has(n.id)),
+    [formNodes, isChildForm]
+  );
+
   const unallocated = React.useMemo(() => ({
     functions: nodes.filter(n => n.data?.layer === 'function' && !linkedFuncIds.has(n.id)),
     failures:  nodes.filter(n => n.data?.layer === 'failure'  && !linkedFailIds.has(n.id)),
   }), [nodes, linkedFuncIds, linkedFailIds]);
 
-  const hasUnallocated = unallocated.functions.length > 0 || unallocated.failures.length > 0;
-  const trayH = 56;
-  const svgH = Math.max(200, size.h - (hasUnallocated ? trayH : 0));
-
-  const layoutItems = React.useMemo(() => {
-    const rootForms = formNodes.filter(n => !isChildForm.has(n.id));
-    return ntmBuildLayout(
-      rootForms.map(n => n.id),
-      formKids, formFuncs, formFails, nodeMap,
-      size.w, svgH
-    );
-  }, [formNodes, formKids, formFuncs, formFails, isChildForm, nodeMap, size.w, svgH]);
-
-  const handleDrop = React.useCallback((formId, e) => {
-    e.preventDefault();
-    setDragOver(null);
-    try {
-      const { id: nodeId, layer } = JSON.parse(e.dataTransfer.getData('text/plain'));
-      const edgeType = layer === 'function' ? 'performs_function' : 'has_failure';
-      setEdges(eds => {
-        if (eds.some(ed => ed.source === formId && ed.target === nodeId && ed.data?.edgeType === edgeType)) return eds;
-        return [...eds, {
-          id: `e-${formId}-${nodeId}-${Date.now()}`,
-          source: formId,
-          target: nodeId,
-          data: { edgeType },
-          type: 'default',
-          markerEnd: { type: MarkerType.ArrowClosed },
-        }];
-      });
-    } catch (_) { /* ignore malformed drag data */ }
-  }, [setEdges]);
-
-  // Handle drag-over on the SVG by finding the innermost form rect at cursor.
-  const handleSvgDragOver = React.useCallback((e) => {
-    e.preventDefault();
-    const svgEl = e.currentTarget;
-    const rect  = svgEl.getBoundingClientRect();
-    const mx = e.clientX - rect.left;
-    const my = e.clientY - rect.top;
-    const hit = layoutItems
-      .filter(item => item.type === 'form'
-        && mx >= item.x && mx <= item.x + item.w
-        && my >= item.y && my <= item.y + item.h)
-      .sort((a, b) => (a.w * a.h) - (b.w * b.h))[0];
-    setDragOver(hit ? hit.id : null);
-  }, [layoutItems]);
-
-  const handleSvgDrop = React.useCallback((e) => {
-    e.preventDefault();
-    if (dragOver) handleDrop(dragOver, e);
-    setDragOver(null);
-  }, [dragOver, handleDrop]);
-
   const funcColor = domainStyling?.theme?.functionLayerColor || '#8b5cf6';
   const failColor = domainStyling?.theme?.failureLayerColor  || '#ef4444';
 
+  const assignNode = React.useCallback((formId, nodeId, layer) => {
+    const edgeType = layer === 'function' ? 'performs_function' : 'has_failure';
+    setEdges(eds => {
+      if (eds.some(ed => ed.source === formId && ed.target === nodeId && ed.data?.edgeType === edgeType)) return eds;
+      return [...eds, {
+        id: `e-${formId}-${nodeId}-${Date.now()}`,
+        source: formId,
+        target: nodeId,
+        data: { edgeType },
+        type: 'default',
+        markerEnd: { type: MarkerType.ArrowClosed },
+      }];
+    });
+  }, [setEdges]);
+
+  // Recursive renderer: each form card + its children column to the right.
+  // Same-level forms are stacked vertically by the parent flex-column container.
+  const renderForm = (formId, depth) => {
+    const node = nodeMap[formId];
+    if (!node) return null;
+    const isCollapsed = collapsed[formId];
+    const children = formKids[formId] || [];
+    const funcs = formFuncs[formId] || [];
+    const fails = formFails[formId] || [];
+    const label = node.data?.label || formId;
+    const hasContent = children.length > 0 || funcs.length > 0 || fails.length > 0;
+    const isDragOver = dragOver === formId;
+    const depthClass = `callgrid-form-d${Math.min(depth + 1, 3)}`;
+
+    return (
+      <div
+        key={formId}
+        style={{ display: 'flex', flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}
+      >
+        {/* Form card */}
+        <div
+          className={`callgrid-form ${depthClass}${isDragOver ? ' callgrid-drag-over' : ''}`}
+          style={{ minWidth: 180, maxWidth: 240 }}
+          onDragOver={e => { e.preventDefault(); setDragOver(formId); }}
+          onDragLeave={e => { e.preventDefault(); setDragOver(null); }}
+          onDrop={e => {
+            e.preventDefault();
+            setDragOver(null);
+            try {
+              const { id: nodeId, layer } = JSON.parse(e.dataTransfer.getData('text/plain'));
+              assignNode(formId, nodeId, layer);
+            } catch (_) { /* ignore malformed drag data */ }
+          }}
+        >
+          <div className="callgrid-form-header">
+            {hasContent && (
+              <button
+                className="callgrid-toggle-btn"
+                onClick={() => toggle(formId)}
+                aria-label={isCollapsed ? 'Expand' : 'Collapse'}
+              >
+                {isCollapsed ? '▶' : '▼'}
+              </button>
+            )}
+            <span className="callgrid-form-label" title={label}>{label}</span>
+            <div className="callgrid-badges">
+              {funcs.length > 0 && (
+                <span
+                  className="callgrid-badge"
+                  style={{ background: `${funcColor}20`, color: funcColor, borderColor: `${funcColor}60` }}
+                  title={`${funcs.length} function(s)`}
+                >
+                  ƒ{funcs.length}
+                </span>
+              )}
+              {fails.length > 0 && (
+                <span
+                  className="callgrid-badge"
+                  style={{ background: `${failColor}20`, color: failColor, borderColor: `${failColor}60` }}
+                  title={`${fails.length} failure(s)`}
+                >
+                  ⚠{fails.length}
+                </span>
+              )}
+            </div>
+          </div>
+          {!isCollapsed && (funcs.length > 0 || fails.length > 0) && (
+            <div className="callgrid-form-body">
+              {funcs.map(fid => {
+                const fn = nodeMap[fid];
+                if (!fn) return null;
+                return (
+                  <span
+                    key={fid}
+                    className="callgrid-chip callgrid-chip-func"
+                    style={{ borderColor: funcColor, color: funcColor }}
+                    title={fn.data?.label}
+                  >
+                    {fn.data?.label}
+                  </span>
+                );
+              })}
+              {fails.map(fid => {
+                const fn = nodeMap[fid];
+                if (!fn) return null;
+                return (
+                  <span
+                    key={fid}
+                    className="callgrid-chip callgrid-chip-fail"
+                    style={{ borderColor: failColor, color: failColor }}
+                    title={fn.data?.label}
+                  >
+                    {fn.data?.label}
+                  </span>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Children column — extends to the RIGHT; siblings stacked DOWNWARD */}
+        {!isCollapsed && children.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 8 }}>
+            {children.map(cid => renderForm(cid, depth + 1))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   if (formNodes.length === 0) {
     return (
-      <div className="ctmap-wrap">
+      <div className="callgrid-wrap">
         <div className="chtree-empty-msg">No form nodes yet. Add nodes from the toolbar above.</div>
       </div>
     );
   }
 
+  const hasUnallocated = unallocated.functions.length > 0 || unallocated.failures.length > 0;
+
   return (
-    <div className="ctmap-wrap" style={{ overflow: 'hidden' }}>
-      {/* Scrollable SVG canvas */}
-      <div
-        ref={containerRef}
-        style={{ flex: 1, overflow: 'auto', minHeight: 0 }}
-      >
-        <svg
-          width={size.w}
-          height={svgH}
-          style={{ display: 'block' }}
-          onDragOver={handleSvgDragOver}
-          onDragLeave={() => setDragOver(null)}
-          onDrop={handleSvgDrop}
-        >
-          {layoutItems.map(item => {
-            if (item.w < 1 || item.h < 1) return null;
-            const showLabel = item.w >= NTM_MIN_LABEL_W && item.h >= NTM_MIN_LABEL_H;
-            // Prefix clip-path IDs with node type to guarantee uniqueness across the SVG.
-            const clipId = `ntm-clip-${item.type}-${item.id}`;
-
-            if (item.type === 'form') {
-              const fill   = dragOver === item.id
-                ? '#eef2ff'
-                : NTM_FORM_FILL[item.depth % NTM_FORM_FILL.length];
-              const stroke = dragOver === item.id
-                ? '#6366f1'
-                : NTM_FORM_STROKE[item.depth % NTM_FORM_STROKE.length];
-              const sw = dragOver === item.id ? 2 : 1;
-              const fontSize = Math.max(9, Math.min(12, item.w / 14));
-              // Header strip uses 18% opacity overlay of the stroke colour.
-              const headerFill = `${stroke}2e`;
-
-              return (
-                <g key={item.id}>
-                  {/* Background rect */}
-                  <rect
-                    x={item.x} y={item.y}
-                    width={Math.max(0, item.w - 1)}
-                    height={Math.max(0, item.h - 1)}
-                    fill={fill}
-                    stroke={stroke}
-                    strokeWidth={sw}
-                    rx={2}
-                  />
-                  {/* Header colour strip */}
-                  <rect
-                    x={item.x} y={item.y}
-                    width={Math.max(0, item.w - 1)}
-                    height={Math.min(NTM_HEADER_H, Math.max(0, item.h - 1))}
-                    fill={headerFill}
-                    stroke="none"
-                    rx={2}
-                    style={{ pointerEvents: 'none' }}
-                  />
-                  {/* Clip path so the label never overflows the header strip */}
-                  {showLabel && (
-                    <clipPath id={clipId}>
-                      <rect x={item.x + 5} y={item.y} width={Math.max(0, item.w - 10)} height={NTM_HEADER_H} />
-                    </clipPath>
-                  )}
-                  {showLabel && (
-                    <text
-                      x={item.x + 5}
-                      y={item.y + NTM_HEADER_H - 6}
-                      fontSize={fontSize}
-                      fontWeight={item.depth === 0 ? 700 : 600}
-                      fill="#1e293b"
-                      clipPath={`url(#${clipId})`}
-                      style={{ pointerEvents: 'none', userSelect: 'none' }}
-                    >
-                      {item.label}
-                    </text>
-                  )}
-                </g>
-              );
-            }
-
-            if (item.type === 'function' || item.type === 'failure') {
-              const color    = item.type === 'function' ? funcColor : failColor;
-              const fontSize = Math.max(8, Math.min(10, item.w / 12));
-              // Leaf fill uses 15% opacity of the accent colour.
-              const leafFill = `${color}26`;
-
-              return (
-                <g key={`${item.type}-${item.id}`}>
-                  <rect
-                    x={item.x + 1} y={item.y + 1}
-                    width={Math.max(0, item.w - 2)}
-                    height={Math.max(0, item.h - 2)}
-                    fill={leafFill}
-                    stroke={color}
-                    strokeWidth={1}
-                    rx={2}
-                  />
-                  {showLabel && (
-                    <>
-                      <clipPath id={clipId}>
-                        <rect x={item.x + 4} y={item.y} width={Math.max(0, item.w - 8)} height={item.h} />
-                      </clipPath>
-                      <text
-                        x={item.x + 4}
-                        y={item.y + item.h / 2 + fontSize / 2 - 1}
-                        fontSize={fontSize}
-                        fill={color}
-                        clipPath={`url(#${clipId})`}
-                        style={{ pointerEvents: 'none', userSelect: 'none' }}
-                      >
-                        {item.label}
-                      </text>
-                    </>
-                  )}
-                </g>
-              );
-            }
-
-            return null;
-          })}
-        </svg>
+    <div className="callgrid-wrap" style={{ overflow: 'auto' }}>
+      {/* Root forms stacked vertically; each renders its children to the right */}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 8 }}>
+        {rootForms.map(n => renderForm(n.id, 0))}
       </div>
 
       {/* Unallocated nodes tray */}
       {hasUnallocated && (
-        <div className="ctmap-unallocated">
-          <div className="ctmap-unallocated-header">Unallocated — drag into a form above</div>
-          <div className="ctmap-unallocated-items">
+        <div className="callgrid-unallocated">
+          <div className="callgrid-unallocated-header">Unallocated — drag into a form above</div>
+          <div className="callgrid-unallocated-items">
             {unallocated.functions.map(n => (
-              <div key={n.id}
-                className="ctmap-chip ctmap-chip-func ctmap-chip-draggable"
+              <div
+                key={n.id}
+                className="callgrid-chip callgrid-chip-func callgrid-chip-draggable"
                 style={{ borderColor: funcColor }}
                 draggable
                 onDragStart={e => e.dataTransfer.setData('text/plain', JSON.stringify({ id: n.id, layer: 'function' }))}
-                title={`Drag to assign: ${n.data?.label}`}>
+                title={`Drag to assign: ${n.data?.label}`}
+              >
                 {n.data?.label}
               </div>
             ))}
             {unallocated.failures.map(n => (
-              <div key={n.id}
-                className="ctmap-chip ctmap-chip-fail ctmap-chip-draggable"
+              <div
+                key={n.id}
+                className="callgrid-chip callgrid-chip-fail callgrid-chip-draggable"
                 style={{ borderColor: failColor }}
                 draggable
                 onDragStart={e => e.dataTransfer.setData('text/plain', JSON.stringify({ id: n.id, layer: 'failure' }))}
-                title={`Drag to assign: ${n.data?.label}`}>
+                title={`Drag to assign: ${n.data?.label}`}
+              >
                 {n.data?.label}
               </div>
             ))}
@@ -858,7 +715,7 @@ function GraphEditor({ graph, domainInfo, domainStyling, onGraphChange, activeLa
                 accentColor={domainStyling?.theme?.formLayerColor || '#3b82f6'}
               />
             ) : (
-              <CascadedTreeMap
+              <AllLayersCollapsibleGrid
                 nodes={nodes}
                 edges={edges}
                 domainStyling={domainStyling}
