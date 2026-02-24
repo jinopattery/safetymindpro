@@ -5,6 +5,7 @@ function DomainSelector({ domains, selectedDomain, onDomainChange }) {
   const domainIcons = {
     automotive: '🚗',
     process_plant: '⚙️',
+    finance: '🏦',
     financial: '💰',
     trading: '📈'
   };

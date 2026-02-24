@@ -5,6 +5,7 @@ This package manages all domain-specific adapters and their registration.
 
 Currently active domains:
 - Automotive: FMEA and FTA analysis for automotive safety
+- Finance: Risk analysis for financial systems (share deposits, investment functions, financial losses)
 
 Domain Registration:
 Each domain adapter has a register() class method that creates an instance
@@ -16,6 +17,7 @@ To enable additional domains, uncomment their import and registration lines belo
 
 # Active domain imports
 from .automotive import AutomotiveDomain
+from .finance import FinanceDomain
 
 # Disabled domains (uncomment to enable)
 # from .process_plant import ProcessPlantDomain
@@ -29,6 +31,7 @@ from .registry import registry, register_domain, get_domain, list_domains
 # Domain registration calls
 # Each domain's register() method creates an instance and adds it to the registry
 AutomotiveDomain.register()  # Register automotive domain
+FinanceDomain.register()     # Register finance domain
 
 # Disabled domain registrations (uncomment to enable)
 # ProcessPlantDomain.register()
