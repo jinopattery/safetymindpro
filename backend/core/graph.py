@@ -143,6 +143,10 @@ class Graph:
     def from_dict(cls, data: Dict[str, Any]) -> 'Graph':
         """Create graph from dictionary
         
+        Supports both the internal NodeData format and the React Flow node format
+        (where label/domain/attributes are nested inside a 'data' sub-dict and
+        type may be 'default' with the domain-specific type in data.nodeType).
+        
         Args:
             data: Graph data
             
@@ -151,15 +155,47 @@ class Graph:
         """
         graph = cls()
         
-        # Add nodes
+        # Add nodes - handle both NodeData format and React Flow format
         for node_data in data.get('nodes', []):
-            node = NodeData(**node_data)
-            graph.add_node(node)
+            node_id = node_data.get('id')
+            if not node_id:
+                continue
+            
+            # Build node attributes preserving all fields
+            attrs = {k: v for k, v in node_data.items() if k != 'id'}
+            
+            # Promote fields from the nested React Flow 'data' sub-dict to top-level
+            # so algorithms can find them with node_data.get('label'), .get('type'), etc.
+            nested = attrs.get('data', {})
+            if isinstance(nested, dict):
+                # Promote domain-specific node type (React Flow uses 'default' as type)
+                if nested.get('nodeType') and attrs.get('type') in (None, 'default'):
+                    attrs['type'] = nested['nodeType']
+                # Promote label if not already at top-level
+                if nested.get('label') and 'label' not in attrs:
+                    attrs['label'] = nested['label']
+                # Promote domain if not already at top-level
+                if nested.get('domain') and 'domain' not in attrs:
+                    attrs['domain'] = nested['domain']
+                # Promote attributes if not already at top-level (use 'in' to handle empty dicts)
+                if 'attributes' in nested and 'attributes' not in attrs:
+                    attrs['attributes'] = nested['attributes']
+            
+            graph.graph.add_node(node_id, **attrs)
         
-        # Add edges
+        # Add edges - handle both EdgeData format and React Flow edge format
         for edge_data in data.get('edges', []):
-            edge = EdgeData(**edge_data)
-            graph.add_edge(edge)
+            source = edge_data.get('source')
+            target = edge_data.get('target')
+            if not source or not target:
+                continue
+            try:
+                edge = EdgeData(**edge_data)
+                graph.add_edge(edge)
+            except Exception:
+                # Fallback: add edge directly for React Flow format with extra fields
+                edge_attrs = {k: v for k, v in edge_data.items() if k not in ('source', 'target')}
+                graph.graph.add_edge(source, target, **edge_attrs)
         
         graph.graph_metadata = data.get('graph_metadata', data.get('metadata', {}))  # Support old 'metadata' key for backward compatibility
         return graph
