@@ -18,6 +18,8 @@ const getDefaultAlgorithmParams = (algorithmName) => {
     risk_scoring:            {},
     dependency_propagation:  { max_depth: 4 },
     critical_components:     { top_n: 5 },
+    severity_traceability:   { severity_threshold: 7 },
+    dependency_factor:       { top_n: 10 },
   };
   return defaults[algorithmName] || {};
 };
@@ -615,6 +617,48 @@ function WorkspacePage({ user, onLogout }) {
     const getTimestamp = () => new Date().toLocaleTimeString();
     setLoading(true);
     setShowConsole(true);
+
+    // ── Special case: Validate Diagram ────────────────────────────────────
+    if (algorithmName === 'validate_diagram') {
+      setAlgorithmLog(prev => [
+        ...prev,
+        { type: 'info', message: '▶ Running: Validate Diagram', time: getTimestamp() },
+      ]);
+      try {
+        const result = await domainsAPI.validateDiagram(selectedDomain, graph);
+        const statusIcon = { pass: '✓', warn: '⚠', info: 'ℹ', error: '✗' };
+        const logType   = { pass: 'success', warn: 'warn', info: 'info', error: 'error' };
+        setAlgorithmLog(prev => [
+          ...prev,
+          {
+            type: result.valid ? 'success' : 'warn',
+            message: result.summary,
+            time: getTimestamp(),
+          },
+          { type: 'info', message: `  Forms: ${result.stats?.forms ?? 0}  Functions: ${result.stats?.functions ?? 0}  Failures: ${result.stats?.failures ?? 0}  Edges: ${result.stats?.edges ?? 0}`, time: getTimestamp() },
+          ...(result.checks || []).flatMap(c => [
+            {
+              type: logType[c.status] || 'info',
+              message: `  ${statusIcon[c.status] || ' '} [${c.check}] ${c.message}`,
+              time: getTimestamp(),
+            },
+            ...(c.items && c.items.length > 0
+              ? [{ type: 'result', message: `      → ${c.items.slice(0, 5).join(', ')}${c.items.length > 5 ? ` … +${c.items.length - 5} more` : ''}`, time: getTimestamp() }]
+              : []),
+          ]),
+        ]);
+      } catch (error) {
+        setAlgorithmLog(prev => [
+          ...prev,
+          { type: 'error', message: `✗ Validation error: ${error.message || 'Failed to validate diagram.'}`, time: getTimestamp() },
+        ]);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    // ── All other algorithms: auto-validate first, then run ────────────────
     setAlgorithmLog(prev => [
       ...prev,
       { type: 'info', message: `▶ Running: ${algorithmName.replace(/_/g, ' ')}`, time: getTimestamp() },
@@ -622,6 +666,37 @@ function WorkspacePage({ user, onLogout }) {
         ? [{ type: 'info', message: `  Params: ${JSON.stringify(params)}`, time: getTimestamp() }]
         : []),
     ]);
+
+    // Step 1: Validate diagram before executing graph algorithm
+    try {
+      const validation = await domainsAPI.validateDiagram(selectedDomain, graph);
+      if (!validation.valid) {
+        setAlgorithmLog(prev => [
+          ...prev,
+          { type: 'warn', message: `⚠ Pre-run validation: ${validation.summary}`, time: getTimestamp() },
+          ...(validation.checks || [])
+            .filter(c => c.status === 'error' || c.status === 'warn')
+            .map(c => ({
+              type: c.status === 'error' ? 'error' : 'warn',
+              message: `  ⚠ [${c.check}] ${c.message}`,
+              time: getTimestamp(),
+            })),
+          { type: 'error', message: '✗ Algorithm aborted — fix validation errors above and retry.', time: getTimestamp() },
+        ]);
+        setLoading(false);
+        return;
+      }
+      if (validation.checks && validation.checks.some(c => c.status === 'warn')) {
+        setAlgorithmLog(prev => [
+          ...prev,
+          { type: 'warn', message: `⚠ Pre-run validation: ${validation.summary}`, time: getTimestamp() },
+        ]);
+      }
+    } catch {
+      // If validation endpoint is unavailable, proceed anyway
+    }
+
+    // Step 2: Run the selected algorithm
     try {
       const result = await domainsAPI.runAlgorithm(selectedDomain, algorithmName, graph, params);
       if (result.success) {
@@ -1036,27 +1111,34 @@ function WorkspacePage({ user, onLogout }) {
 
             {/* ── Algorithm selector + Run (moved from sidebar) ── */}
             <div className="toolbar-middle">
-              {domainInfo?.algorithms && domainInfo.algorithms.length > 0 && (
+              {domainInfo && (
                 <>
                   <select
                     className="algo-select"
                     value={selectedAlgorithm?.name || ''}
                     onChange={e => {
-                      const algo = domainInfo.algorithms.find(a => a.name === e.target.value);
-                      setSelectedAlgorithm(algo || null);
-                      setAlgorithmParams(getDefaultAlgorithmParams(e.target.value));
+                      const val = e.target.value;
+                      if (val === 'validate_diagram') {
+                        setSelectedAlgorithm({ name: 'validate_diagram', description: 'Validate diagram connectivity and allocation' });
+                        setAlgorithmParams({});
+                      } else {
+                        const algo = domainInfo.algorithms?.find(a => a.name === val);
+                        setSelectedAlgorithm(algo || null);
+                        setAlgorithmParams(getDefaultAlgorithmParams(val));
+                      }
                     }}
                     aria-label="Algorithm"
                   >
                     <option value="">Algorithm…</option>
-                    {domainInfo.algorithms.map(a => (
+                    <option value="validate_diagram">✔ Validate Diagram</option>
+                    {(domainInfo.algorithms || []).map(a => (
                       <option key={a.name} value={a.name}>
                         {a.name.replace(/_/g, ' ')}
                       </option>
                     ))}
                   </select>
 
-                  {selectedAlgorithm && Object.entries(algorithmParams).map(([key, val]) => (
+                  {selectedAlgorithm && selectedAlgorithm.name !== 'validate_diagram' && Object.entries(algorithmParams).map(([key, val]) => (
                     <div key={key} className="algo-param">
                       <label className="algo-param-label">{key.replace(/_/g, ' ')}</label>
                       <input

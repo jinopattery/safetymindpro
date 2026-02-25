@@ -860,6 +860,7 @@
 .console-line-success .console-msg { color: #4ade80; }
 .console-line-result  .console-msg { color: #a78bfa; }
 .console-line-info    .console-msg { color: #93c5fd; }
+.console-line-warn    .console-msg { color: #fbbf24; }
 
 .console-footer {
   display: flex;

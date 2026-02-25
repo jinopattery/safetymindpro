@@ -18,7 +18,8 @@ from backend.algorithms import (
     structural_analysis,
     functional_analysis,
     risk_analysis,
-    timeseries_analysis
+    timeseries_analysis,
+    diagram_validation,
 )
 from backend.database import get_db
 from backend.models import Graph as GraphModel
@@ -76,6 +77,36 @@ class AlgorithmRunResponse(BaseModel):
     results: Dict[str, Any]
     updated_graph: Dict[str, Any]
     error: Optional[str] = None
+
+
+class ValidateDiagramRequest(BaseModel):
+    """Request to validate a diagram"""
+    domain: str
+    graph_data: Dict[str, Any]
+
+
+@router.post("/validate-diagram")
+async def validate_diagram(request: ValidateDiagramRequest):
+    """
+    Validate diagram connectivity and allocation rules.
+
+    Checks performed:
+    - Function connectivity (function_flow edges)
+    - Failure connectivity (failure_propagation edges)
+    - Form connectivity (form_hierarchy edges)
+    - Function allocation to forms (performs_function edges)
+    - Failure allocation to forms (has_failure edges)
+
+    Top-level (root) items are allowed to remain standalone.
+
+    Args:
+        request: { domain, graph_data }
+
+    Returns:
+        Validation report with per-check status and overall validity flag.
+    """
+    result = diagram_validation.validate_diagram(request.graph_data, request.domain)
+    return result
 
 
 @router.get("/", response_model=List[str])
