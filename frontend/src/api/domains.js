@@ -114,5 +114,14 @@ export const domainsAPI = {
       format
     });
     return response.data;
-  }
+  },
+
+  // Validate diagram connectivity and allocation
+  validateDiagram: async (domain, graphData) => {
+    const response = await axios.post(`${API_BASE}/domains/validate-diagram`, {
+      domain,
+      graph_data: graphData,
+    });
+    return response.data;
+  },
 };

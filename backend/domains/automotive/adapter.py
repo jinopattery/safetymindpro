@@ -170,6 +170,197 @@ class CriticalComponentAnalysis(DomainAlgorithm):
         }
 
 
+class SeverityTraceability(DomainAlgorithm):
+    """
+    Traces severity propagation through the failure tree.
+
+    Uses ASIL / severity ratings on failure nodes to compute the maximum
+    severity reachable from each failure and identify high-impact root causes.
+    Works with the React Flow graph format (data.attributes on each node).
+    """
+
+    @property
+    def name(self) -> str:
+        return "severity_traceability"
+
+    @property
+    def description(self) -> str:
+        return "Traces severity through the failure tree and identifies high-impact root causes (FMEA RPN)"
+
+    def run(self, graph: Graph, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """Trace severity through failure propagation tree"""
+        severity_threshold = (params or {}).get('severity_threshold', 7)
+
+        # Build severity map from node attributes (React Flow format)
+        severity_map: Dict[str, float] = {}
+        rpn_map: Dict[str, float] = {}
+        label_map: Dict[str, str] = {}
+
+        for node_id, node_data in graph.graph.nodes(data=True):
+            # Handle both flat NodeData format and React Flow nested 'data' dict
+            attrs = node_data.get('attributes', {})
+            nested = node_data.get('data', {})
+            nested_attrs = nested.get('attributes', {}) if isinstance(nested, dict) else {}
+
+            severity = (
+                attrs.get('severity')
+                or nested_attrs.get('severity')
+                or 1
+            )
+            occurrence = (
+                attrs.get('occurrence')
+                or nested_attrs.get('occurrence')
+                or 1
+            )
+            detection = (
+                attrs.get('detection')
+                or nested_attrs.get('detection')
+                or 1
+            )
+            label = (
+                node_data.get('label')
+                or (nested.get('label') if isinstance(nested, dict) else None)
+                or node_id
+            )
+
+            severity_map[node_id] = float(severity)
+            rpn_map[node_id] = float(severity) * float(occurrence) * float(detection)
+            label_map[node_id] = str(label)
+
+        if not severity_map:
+            return {
+                'severity_tree': [],
+                'high_severity_roots': [],
+                'max_severity': 0,
+                'total_failures_analyzed': 0,
+            }
+
+        # BFS/DFS forward traversal to find max downstream severity for each node
+        max_downstream: Dict[str, float] = {}
+
+        def _max_sev(node_id: str, visited: set) -> float:
+            if node_id in max_downstream:
+                return max_downstream[node_id]
+            if node_id in visited:
+                return severity_map.get(node_id, 1)
+            visited.add(node_id)
+            own_sev = severity_map.get(node_id, 1)
+            children_sev = [
+                _max_sev(c, visited)
+                for c in graph.graph.successors(node_id)
+            ]
+            result = max([own_sev] + children_sev)
+            max_downstream[node_id] = result
+            return result
+
+        for nid in list(graph.graph.nodes()):
+            _max_sev(nid, set())
+
+        # Build traceability report
+        severity_tree = []
+        for node_id in graph.graph.nodes():
+            sev = severity_map.get(node_id, 1)
+            max_sev = max_downstream.get(node_id, sev)
+            rpn = rpn_map.get(node_id, sev)
+            in_deg = graph.graph.in_degree(node_id)
+            out_deg = graph.graph.out_degree(node_id)
+            severity_tree.append({
+                'node_id': node_id,
+                'label': label_map.get(node_id, node_id),
+                'severity': sev,
+                'rpn': round(rpn, 2),
+                'max_downstream_severity': max_sev,
+                'is_root': in_deg == 0,
+                'propagates_to': out_deg,
+                'is_high_severity': sev >= severity_threshold,
+            })
+
+        severity_tree.sort(key=lambda x: x['max_downstream_severity'], reverse=True)
+
+        high_severity_roots = [
+            e for e in severity_tree
+            if e['is_root'] and e['max_downstream_severity'] >= severity_threshold
+        ]
+
+        return {
+            'severity_tree': severity_tree[:20],  # top 20
+            'high_severity_roots': high_severity_roots,
+            'max_severity': max(severity_map.values()) if severity_map else 0,
+            'total_failures_analyzed': len(severity_tree),
+            'severity_threshold': severity_threshold,
+        }
+
+
+class DependencyFactor(DomainAlgorithm):
+    """
+    Computes the dependency factor for each function in the functional network.
+
+    Dependency Factor = in_degree / (in_degree + out_degree + 1)
+    A higher factor means the function depends on more upstream functions
+    and could be a bottleneck if those upstream functions fail.
+    Works with the React Flow graph format.
+    """
+
+    @property
+    def name(self) -> str:
+        return "dependency_factor"
+
+    @property
+    def description(self) -> str:
+        return "Computes dependency factor for each function in the functional network (bottleneck analysis)"
+
+    def run(self, graph: Graph, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """Compute dependency factor for all functions"""
+        top_n = (params or {}).get('top_n', 10)
+
+        dependency_data = []
+        for node_id, node_data in graph.graph.nodes(data=True):
+            # Extract label
+            nested = node_data.get('data', {})
+            label = (
+                node_data.get('label')
+                or (nested.get('label') if isinstance(nested, dict) else None)
+                or node_id
+            )
+
+            in_deg = graph.graph.in_degree(node_id)
+            out_deg = graph.graph.out_degree(node_id)
+            total = in_deg + out_deg
+
+            if total == 0:
+                dep_factor = 0.0
+                influence = 0.0
+            else:
+                dep_factor = in_deg / (total + 1)
+                influence = out_deg / (total + 1)
+
+            # Betweenness centrality (normalized) for additional insight
+            dependency_data.append({
+                'node_id': node_id,
+                'label': str(label),
+                'in_degree': in_deg,
+                'out_degree': out_deg,
+                'dependency_factor': round(dep_factor, 4),
+                'influence_factor': round(influence, 4),
+                'is_bottleneck': in_deg > 1 and out_deg > 1,
+            })
+
+        dependency_data.sort(key=lambda x: x['dependency_factor'], reverse=True)
+
+        high_dependency = [d for d in dependency_data if d['dependency_factor'] > 0.3]
+        bottlenecks = [d for d in dependency_data if d['is_bottleneck']]
+
+        return {
+            'dependency_factors': dependency_data[:int(top_n)],
+            'high_dependency_functions': high_dependency,
+            'bottlenecks': bottlenecks,
+            'total_nodes_analyzed': len(dependency_data),
+            'average_dependency_factor': round(
+                sum(d['dependency_factor'] for d in dependency_data) / len(dependency_data), 4
+            ) if dependency_data else 0,
+        }
+
+
 class AutomotiveDomain(DomainAdapter):
     """
     Automotive safety analysis domain adapter.
@@ -387,7 +578,9 @@ class AutomotiveDomain(DomainAdapter):
         return [
             FMEARiskAnalysis(),
             FailurePropagationAnalysis(),
-            CriticalComponentAnalysis()
+            CriticalComponentAnalysis(),
+            SeverityTraceability(),
+            DependencyFactor(),
         ]
     
     def validate_node(self, node_data: Dict[str, Any]) -> bool:

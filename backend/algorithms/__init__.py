@@ -20,6 +20,7 @@ from backend.algorithms.timeseries_analysis import (
     analyze_timeseries,
     detect_anomalies
 )
+from backend.algorithms import diagram_validation
 
 __all__ = [
     'compute_criticality',
@@ -29,5 +30,6 @@ __all__ = [
     'analyze_failure_propagation',
     'compute_risk_priority',
     'analyze_timeseries',
-    'detect_anomalies'
+    'detect_anomalies',
+    'diagram_validation',
 ]
