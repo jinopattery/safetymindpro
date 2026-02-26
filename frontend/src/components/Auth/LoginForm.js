@@ -144,6 +144,13 @@ function LoginForm({ onLogin }) {
             <p>
               Don't have an account? <Link to="/signup">Sign up</Link>
             </p>
+            <p className="auth-legal-links">
+              <Link to="/terms-and-conditions">Terms</Link>
+              {' · '}
+              <Link to="/privacy-policy">Privacy</Link>
+              {' · '}
+              <Link to="/plans">Plans</Link>
+            </p>
           </div>
         </form>
       </div>

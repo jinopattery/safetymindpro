@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { domainsAPI } from '../api/domains';
 import MyPrivacyData from './MyPrivacyData';
 import './Dashboard.css';
@@ -90,6 +90,34 @@ function Dashboard({ user, onLogout }) {
               <span className="dashboard-sidebar-icon">🔒</span>
               <span className="dashboard-sidebar-label">My Privacy Data</span>
             </button>
+          </div>
+
+          <div className="dashboard-sidebar-section dashboard-sidebar-legal">
+            <div className="dashboard-sidebar-title">LEGAL &amp; INFO</div>
+            <Link to="/terms-and-conditions" className="dashboard-sidebar-item" target="_blank" rel="noopener noreferrer">
+              <span className="dashboard-sidebar-icon">📋</span>
+              <span className="dashboard-sidebar-label">Terms &amp; Conditions</span>
+            </Link>
+            <Link to="/privacy-policy" className="dashboard-sidebar-item" target="_blank" rel="noopener noreferrer">
+              <span className="dashboard-sidebar-icon">🔐</span>
+              <span className="dashboard-sidebar-label">Privacy Policy</span>
+            </Link>
+            <Link to="/ai-terms" className="dashboard-sidebar-item" target="_blank" rel="noopener noreferrer">
+              <span className="dashboard-sidebar-icon">🤖</span>
+              <span className="dashboard-sidebar-label">AI Terms</span>
+            </Link>
+            <Link to="/plans" className="dashboard-sidebar-item" target="_blank" rel="noopener noreferrer">
+              <span className="dashboard-sidebar-icon">💎</span>
+              <span className="dashboard-sidebar-label">Pricing Plans</span>
+            </Link>
+            <Link to="/financial-data-sources" className="dashboard-sidebar-item" target="_blank" rel="noopener noreferrer">
+              <span className="dashboard-sidebar-icon">📊</span>
+              <span className="dashboard-sidebar-label">Financial Data Sources</span>
+            </Link>
+            <Link to="/automotive-data-sources" className="dashboard-sidebar-item" target="_blank" rel="noopener noreferrer">
+              <span className="dashboard-sidebar-icon">🚗</span>
+              <span className="dashboard-sidebar-label">Automotive Data Sources</span>
+            </Link>
           </div>
         </aside>
 

@@ -15,6 +15,11 @@ import CookieConsent from './components/CookieConsent';
 // Pages
 import EmailVerification from './pages/EmailVerification';
 import PrivacyPolicy from './pages/PrivacyPolicy';
+import TermsAndConditions from './pages/TermsAndConditions';
+import AITerms from './pages/AITerms';
+import Plans from './pages/Plans';
+import FinancialDataSources from './pages/FinancialDataSources';
+import AutomotiveDataSources from './pages/AutomotiveDataSources';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(authAPI.isAuthenticated());
@@ -110,6 +115,11 @@ function App() {
           />
           <Route path="/verify-email" element={<EmailVerification />} />
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+          <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
+          <Route path="/ai-terms" element={<AITerms />} />
+          <Route path="/plans" element={<Plans />} />
+          <Route path="/financial-data-sources" element={<FinancialDataSources />} />
+          <Route path="/automotive-data-sources" element={<AutomotiveDataSources />} />
 
           {/* Protected routes */}
           <Route 
