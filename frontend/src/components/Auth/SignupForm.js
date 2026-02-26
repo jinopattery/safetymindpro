@@ -222,6 +222,10 @@ function SignupForm({ onSignup }) {
                 <Link to="/privacy-policy" target="_blank" rel="noopener noreferrer">
                   Privacy Policy
                 </Link>{' '}
+                and{' '}
+                <Link to="/terms-and-conditions" target="_blank" rel="noopener noreferrer">
+                  Terms and Conditions
+                </Link>{' '}
                 and agree to the processing of my data as described therein. *
               </span>
             </label>

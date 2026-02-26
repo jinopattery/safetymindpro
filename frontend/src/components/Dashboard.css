@@ -244,3 +244,20 @@
   .dashboard-sidebar { display: none; }
   .dashboard-main { padding: 20px 16px; }
 }
+
+/* ── Legal / Info sidebar section ────────────────────────────────── */
+.dashboard-sidebar-legal {
+  margin-top: auto;
+  border-top: 1px solid #2d3139;
+}
+
+.dashboard-sidebar-legal .dashboard-sidebar-item {
+  text-decoration: none;
+  font-size: 0.74rem;
+  color: #6b7280;
+}
+
+.dashboard-sidebar-legal .dashboard-sidebar-item:hover {
+  color: #9ca3af;
+  background: rgba(255, 255, 255, 0.04);
+}
