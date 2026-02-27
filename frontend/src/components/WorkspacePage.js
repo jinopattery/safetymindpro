@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom';
 import { domainsAPI } from '../api/domains';
 import GraphEditor from './GraphEditor';
+import CandlestickChart from './CandlestickChart';
 import './WorkspacePage.css';
 
 // Default algorithm parameters
@@ -483,6 +484,7 @@ function WorkspacePage({ user, onLogout }) {
   const [algorithmResults, setAlgorithmResults] = useState(null);
   const [algorithmLog, setAlgorithmLog] = useState([]);
   const [showConsole, setShowConsole] = useState(false);
+  const [showCandlestick, setShowCandlestick] = useState(false);
   const consoleOutputRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const [saveStatus, setSaveStatus] = useState('');
@@ -1165,12 +1167,22 @@ function WorkspacePage({ user, onLogout }) {
                   </button>
 
                   <button
-                    onClick={() => setShowConsole(c => !c)}
+                    onClick={() => { setShowConsole(c => !c); setShowCandlestick(false); }}
                     className={`icon-btn btn-console-toggle${showConsole ? ' active' : ''}`}
                     title={showConsole ? 'Switch to canvas view' : 'Switch to console view'}
                   >
                     {'>_'}
                   </button>
+
+                  {(selectedDomain === 'trading' || selectedDomain === 'financial') && (
+                    <button
+                      onClick={() => { setShowCandlestick(c => !c); setShowConsole(false); }}
+                      className={`icon-btn btn-candlestick-toggle${showCandlestick ? ' active' : ''}`}
+                      title={showCandlestick ? 'Switch to canvas view' : 'Depot Candlestick Chart'}
+                    >
+                      📈
+                    </button>
+                  )}
                 </>
               )}
             </div>
@@ -1228,6 +1240,8 @@ function WorkspacePage({ user, onLogout }) {
                 <button className="console-clear-btn" onClick={() => setAlgorithmLog([])}>Clear</button>
               </div>
             </div>
+          ) : showCandlestick ? (
+            <CandlestickChart domain={selectedDomain} />
           ) : domainInfo ? (
             <GraphEditor
               graph={graph}

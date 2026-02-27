@@ -9,7 +9,8 @@ from fastapi import APIRouter, HTTPException, Query, Depends
 from typing import List, Dict, Any, Optional
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from datetime import datetime
+from datetime import datetime, timedelta
+import random
 
 from backend.domains.registry import registry
 from backend.core.graph import Graph, NodeData, EdgeData
@@ -107,6 +108,63 @@ async def validate_diagram(request: ValidateDiagramRequest):
     """
     result = diagram_validation.validate_diagram(request.graph_data, request.domain)
     return result
+
+
+@router.get("/depot-candlestick")
+async def get_depot_candlestick():
+    """
+    Return OHLC candlestick data for depot shares analysis.
+
+    Generates a 60-trading-day price series for a sample depot share,
+    including volume and flags for massive buy / sell events
+    (volume > massive_threshold).
+
+    Returns:
+        symbol, name, massive_threshold and a list of OHLC candles.
+    """
+    rng = random.Random(42)
+    candles = []
+    price = 150.0
+    start_date = datetime(2024, 1, 2)
+    massive_threshold = 1_000_000
+
+    trading_day = start_date
+    collected = 0
+    while collected < 60:
+        # Skip weekends
+        if trading_day.weekday() < 5:
+            open_p = round(price, 2)
+            change = rng.uniform(-5.0, 5.0)
+            close_p = round(open_p + change, 2)
+            high_p = round(max(open_p, close_p) + rng.uniform(0.0, 3.0), 2)
+            low_p = round(min(open_p, close_p) - rng.uniform(0.0, 3.0), 2)
+
+            volume = rng.randint(100_000, 500_000)
+            is_massive = rng.random() < 0.1
+            if is_massive:
+                volume = rng.randint(1_200_000, 5_000_000)
+
+            candles.append({
+                "date": trading_day.strftime("%Y-%m-%d"),
+                "open": open_p,
+                "high": high_p,
+                "low": low_p,
+                "close": close_p,
+                "volume": volume,
+                "massive_buy": is_massive and close_p > open_p,
+                "massive_sell": is_massive and close_p <= open_p,
+            })
+            price = close_p
+            collected += 1
+
+        trading_day += timedelta(days=1)
+
+    return {
+        "symbol": "DEPOT",
+        "name": "Depot Portfolio Shares",
+        "massive_threshold": massive_threshold,
+        "candles": candles,
+    }
 
 
 @router.get("/", response_model=List[str])

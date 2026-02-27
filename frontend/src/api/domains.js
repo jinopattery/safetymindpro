@@ -124,4 +124,10 @@ export const domainsAPI = {
     });
     return response.data;
   },
+
+  // Get depot candlestick (OHLC) data for financial/trading chart
+  getCandlestickData: async () => {
+    const response = await axios.get(`${API_BASE}/domains/depot-candlestick`);
+    return response.data;
+  },
 };
