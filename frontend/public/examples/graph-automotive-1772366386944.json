@@ -1,0 +1,167 @@
+{
+  "nodes": [
+    {
+      "id": "form-brake-system",
+      "type": "default",
+      "data": {
+        "label": "🔷 Brake System",
+        "nodeType": "automotive_component",
+        "layer": "form",
+        "attributes": { "layer": "form" }
+      },
+      "position": { "x": 60, "y": 60 },
+      "style": { "background": "#dbeafe", "color": "#1e3a5f", "border": "1px solid #3b82f6", "borderRadius": "4px", "padding": "6px 10px", "fontSize": "12px" }
+    },
+    {
+      "id": "form-hydraulic-unit",
+      "type": "default",
+      "data": {
+        "label": "🔷 Hydraulic Unit",
+        "nodeType": "automotive_component",
+        "layer": "form",
+        "attributes": { "layer": "form" }
+      },
+      "position": { "x": 240, "y": 60 },
+      "style": { "background": "#dbeafe", "color": "#1e3a5f", "border": "1px solid #3b82f6", "borderRadius": "4px", "padding": "6px 10px", "fontSize": "12px" }
+    },
+    {
+      "id": "form-brake-pad",
+      "type": "default",
+      "data": {
+        "label": "🔷 Brake Pad",
+        "nodeType": "automotive_component",
+        "layer": "form",
+        "attributes": { "layer": "form" }
+      },
+      "position": { "x": 420, "y": 60 },
+      "style": { "background": "#dbeafe", "color": "#1e3a5f", "border": "1px solid #3b82f6", "borderRadius": "4px", "padding": "6px 10px", "fontSize": "12px" }
+    },
+    {
+      "id": "form-caliper",
+      "type": "default",
+      "data": {
+        "label": "🔷 Brake Caliper",
+        "nodeType": "automotive_component",
+        "layer": "form",
+        "attributes": { "layer": "form" }
+      },
+      "position": { "x": 600, "y": 60 },
+      "style": { "background": "#dbeafe", "color": "#1e3a5f", "border": "1px solid #3b82f6", "borderRadius": "4px", "padding": "6px 10px", "fontSize": "12px" }
+    },
+    {
+      "id": "func-provide-braking",
+      "type": "default",
+      "data": {
+        "label": "⚙️ Provide Braking Force",
+        "nodeType": "automotive_function",
+        "layer": "function",
+        "attributes": { "layer": "function" }
+      },
+      "position": { "x": 60, "y": 200 },
+      "style": { "background": "#ede9fe", "color": "#3b0764", "border": "1px solid #8b5cf6", "borderRadius": "4px", "padding": "6px 10px", "fontSize": "12px" }
+    },
+    {
+      "id": "func-hydraulic-pressure",
+      "type": "default",
+      "data": {
+        "label": "⚙️ Generate Hydraulic Pressure",
+        "nodeType": "automotive_function",
+        "layer": "function",
+        "attributes": { "layer": "function" }
+      },
+      "position": { "x": 240, "y": 200 },
+      "style": { "background": "#ede9fe", "color": "#3b0764", "border": "1px solid #8b5cf6", "borderRadius": "4px", "padding": "6px 10px", "fontSize": "12px" }
+    },
+    {
+      "id": "func-pad-contact",
+      "type": "default",
+      "data": {
+        "label": "⚙️ Pad–Disc Contact",
+        "nodeType": "automotive_function",
+        "layer": "function",
+        "attributes": { "layer": "function" }
+      },
+      "position": { "x": 420, "y": 200 },
+      "style": { "background": "#ede9fe", "color": "#3b0764", "border": "1px solid #8b5cf6", "borderRadius": "4px", "padding": "6px 10px", "fontSize": "12px" }
+    },
+    {
+      "id": "func-caliper-apply",
+      "type": "default",
+      "data": {
+        "label": "⚙️ Caliper Clamping",
+        "nodeType": "automotive_function",
+        "layer": "function",
+        "attributes": { "layer": "function" }
+      },
+      "position": { "x": 600, "y": 200 },
+      "style": { "background": "#ede9fe", "color": "#3b0764", "border": "1px solid #8b5cf6", "borderRadius": "4px", "padding": "6px 10px", "fontSize": "12px" }
+    },
+    {
+      "id": "fail-no-braking",
+      "type": "default",
+      "data": {
+        "label": "⚠️ Total Brake Failure",
+        "nodeType": "automotive_failure",
+        "layer": "failure",
+        "attributes": { "layer": "failure" }
+      },
+      "position": { "x": 60, "y": 340 },
+      "style": { "background": "#fee2e2", "color": "#7f1d1d", "border": "1px solid #ef4444", "borderRadius": "4px", "padding": "6px 10px", "fontSize": "12px" }
+    },
+    {
+      "id": "fail-pressure-loss",
+      "type": "default",
+      "data": {
+        "label": "⚠️ Hydraulic Pressure Loss",
+        "nodeType": "automotive_failure",
+        "layer": "failure",
+        "attributes": { "layer": "failure" }
+      },
+      "position": { "x": 240, "y": 340 },
+      "style": { "background": "#fee2e2", "color": "#7f1d1d", "border": "1px solid #ef4444", "borderRadius": "4px", "padding": "6px 10px", "fontSize": "12px" }
+    },
+    {
+      "id": "fail-worn-pads",
+      "type": "default",
+      "data": {
+        "label": "⚠️ Worn Brake Pads",
+        "nodeType": "automotive_failure",
+        "layer": "failure",
+        "attributes": { "layer": "failure" }
+      },
+      "position": { "x": 420, "y": 340 },
+      "style": { "background": "#fee2e2", "color": "#7f1d1d", "border": "1px solid #ef4444", "borderRadius": "4px", "padding": "6px 10px", "fontSize": "12px" }
+    },
+    {
+      "id": "fail-caliper-jam",
+      "type": "default",
+      "data": {
+        "label": "⚠️ Caliper Seizure",
+        "nodeType": "automotive_failure",
+        "layer": "failure",
+        "attributes": { "layer": "failure" }
+      },
+      "position": { "x": 600, "y": 340 },
+      "style": { "background": "#fee2e2", "color": "#7f1d1d", "border": "1px solid #ef4444", "borderRadius": "4px", "padding": "6px 10px", "fontSize": "12px" }
+    }
+  ],
+  "edges": [
+    { "id": "e1", "source": "form-brake-system", "target": "form-hydraulic-unit", "type": "default", "data": { "edgeType": "form_hierarchy" }, "markerEnd": { "type": "arrowclosed" } },
+    { "id": "e2", "source": "form-brake-system", "target": "form-brake-pad",      "type": "default", "data": { "edgeType": "form_hierarchy" }, "markerEnd": { "type": "arrowclosed" } },
+    { "id": "e3", "source": "form-brake-system", "target": "form-caliper",        "type": "default", "data": { "edgeType": "form_hierarchy" }, "markerEnd": { "type": "arrowclosed" } },
+    { "id": "e4", "source": "func-provide-braking",    "target": "func-hydraulic-pressure", "type": "default", "data": { "edgeType": "function_flow" }, "markerEnd": { "type": "arrowclosed" } },
+    { "id": "e5", "source": "func-hydraulic-pressure", "target": "func-caliper-apply",      "type": "default", "data": { "edgeType": "function_flow" }, "markerEnd": { "type": "arrowclosed" } },
+    { "id": "e6", "source": "func-caliper-apply",      "target": "func-pad-contact",        "type": "default", "data": { "edgeType": "function_flow" }, "markerEnd": { "type": "arrowclosed" } },
+    { "id": "e7", "source": "fail-no-braking",    "target": "fail-pressure-loss", "type": "default", "data": { "edgeType": "failure_propagation" }, "markerEnd": { "type": "arrowclosed" } },
+    { "id": "e8", "source": "fail-no-braking",    "target": "fail-worn-pads",     "type": "default", "data": { "edgeType": "failure_propagation" }, "markerEnd": { "type": "arrowclosed" } },
+    { "id": "e9", "source": "fail-no-braking",    "target": "fail-caliper-jam",   "type": "default", "data": { "edgeType": "failure_propagation" }, "markerEnd": { "type": "arrowclosed" } },
+    { "id": "e10", "source": "form-brake-system",   "target": "func-provide-braking",    "type": "default", "data": { "edgeType": "performs_function" }, "markerEnd": { "type": "arrowclosed" } },
+    { "id": "e11", "source": "form-hydraulic-unit", "target": "func-hydraulic-pressure", "type": "default", "data": { "edgeType": "performs_function" }, "markerEnd": { "type": "arrowclosed" } },
+    { "id": "e12", "source": "form-brake-pad",      "target": "func-pad-contact",        "type": "default", "data": { "edgeType": "performs_function" }, "markerEnd": { "type": "arrowclosed" } },
+    { "id": "e13", "source": "form-caliper",        "target": "func-caliper-apply",      "type": "default", "data": { "edgeType": "performs_function" }, "markerEnd": { "type": "arrowclosed" } },
+    { "id": "e14", "source": "form-brake-system",   "target": "fail-no-braking",         "type": "default", "data": { "edgeType": "has_failure" },       "markerEnd": { "type": "arrowclosed" } },
+    { "id": "e15", "source": "form-hydraulic-unit", "target": "fail-pressure-loss",      "type": "default", "data": { "edgeType": "has_failure" },       "markerEnd": { "type": "arrowclosed" } },
+    { "id": "e16", "source": "form-brake-pad",      "target": "fail-worn-pads",          "type": "default", "data": { "edgeType": "has_failure" },       "markerEnd": { "type": "arrowclosed" } },
+    { "id": "e17", "source": "form-caliper",        "target": "fail-caliper-jam",        "type": "default", "data": { "edgeType": "has_failure" },       "markerEnd": { "type": "arrowclosed" } }
+  ]
+}

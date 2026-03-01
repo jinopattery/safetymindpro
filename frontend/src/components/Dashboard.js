@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { domainsAPI } from '../api/domains';
 import MyPrivacyData from './MyPrivacyData';
+import ExamplesGallery from './ExamplesGallery';
 import './Dashboard.css';
 
 const LogoutIcon = () => (
@@ -155,6 +156,7 @@ function Dashboard({ user, onLogout }) {
                   ))}
                 </div>
               )}
+              <ExamplesGallery className="eg-section--workspace" />
             </>
           )}
 

@@ -82,7 +82,7 @@ function buildTreeLayout(layerNodes, edges, childEdgeType) {
   return { coords, childMap, roots, totalW, totalH };
 }
 
-function CollapsibleHorizontalTree({ nodes, edges, layer, childEdgeType, accentColor }) {
+function CollapsibleHorizontalTree({ nodes, edges, layer, childEdgeType, accentColor, selectedNodeId, onNodeSelect }) {
   const [collapsed, setCollapsed] = React.useState({});
   const containerRef = React.useRef(null);
 
@@ -174,10 +174,11 @@ function CollapsibleHorizontalTree({ nodes, edges, layer, childEdgeType, accentC
           if (!pos) return null;
           const children = childMap[n.id] || [];
           const isCollapsed = collapsed[n.id];
+          const isSelected = selectedNodeId === n.id;
           return (
             <div
               key={n.id}
-              className="chtree-node-box"
+              className={`chtree-node-box${isSelected ? ' chtree-node-selected' : ''}`}
               style={{
                 left: pos.x,
                 top: pos.y,
@@ -185,12 +186,13 @@ function CollapsibleHorizontalTree({ nodes, edges, layer, childEdgeType, accentC
                 borderLeftColor: accentColor,
               }}
               title={n.data?.label}
+              onClick={() => onNodeSelect && onNodeSelect(isSelected ? null : n.id)}
             >
               <span className="chtree-node-label">{n.data?.label}</span>
               {children.length > 0 && (
                 <button
                   className="chtree-toggle-btn"
-                  onClick={() => toggle(n.id)}
+                  onClick={evt => { evt.stopPropagation(); toggle(n.id); }}
                   title={isCollapsed ? 'Expand' : 'Collapse'}
                 >
                   {isCollapsed ? '+' : '−'}
@@ -272,6 +274,13 @@ function AllLayersCollapsibleGrid({ nodes, edges, domainStyling, setEdges }) {
     });
   }, [setEdges]);
 
+  const unallocateNode = React.useCallback((formId, nodeId, layer) => {
+    const edgeType = layer === 'function' ? 'performs_function' : 'has_failure';
+    setEdges(eds => eds.filter(
+      ed => !(ed.source === formId && ed.target === nodeId && ed.data?.edgeType === edgeType)
+    ));
+  }, [setEdges]);
+
   // Recursive renderer: each form card + its children column to the right.
   // Same-level forms are stacked vertically by the parent flex-column container.
   const renderForm = (formId, depth) => {
@@ -346,11 +355,17 @@ function AllLayersCollapsibleGrid({ nodes, edges, domainStyling, setEdges }) {
                 return (
                   <span
                     key={fid}
-                    className="callgrid-chip callgrid-chip-func"
+                    className="callgrid-chip callgrid-chip-func callgrid-chip-allocated"
                     style={{ borderColor: funcColor, color: funcColor }}
                     title={fn.data?.label}
                   >
                     {fn.data?.label}
+                    <button
+                      className="callgrid-chip-unalloc"
+                      onClick={() => unallocateNode(formId, fid, 'function')}
+                      title="Unallocate function"
+                      aria-label={`Unallocate ${fn.data?.label}`}
+                    >×</button>
                   </span>
                 );
               })}
@@ -360,11 +375,17 @@ function AllLayersCollapsibleGrid({ nodes, edges, domainStyling, setEdges }) {
                 return (
                   <span
                     key={fid}
-                    className="callgrid-chip callgrid-chip-fail"
+                    className="callgrid-chip callgrid-chip-fail callgrid-chip-allocated"
                     style={{ borderColor: failColor, color: failColor }}
                     title={fn.data?.label}
                   >
                     {fn.data?.label}
+                    <button
+                      className="callgrid-chip-unalloc"
+                      onClick={() => unallocateNode(formId, fid, 'failure')}
+                      title="Unallocate failure"
+                      aria-label={`Unallocate ${fn.data?.label}`}
+                    >×</button>
                   </span>
                 );
               })}
@@ -390,8 +411,6 @@ function AllLayersCollapsibleGrid({ nodes, edges, domainStyling, setEdges }) {
     );
   }
 
-  const hasUnallocated = unallocated.functions.length > 0 || unallocated.failures.length > 0;
-
   return (
     <div className="callgrid-wrap" style={{ overflow: 'auto' }}>
       {/* Root forms stacked vertically; each renders its children to the right */}
@@ -399,38 +418,41 @@ function AllLayersCollapsibleGrid({ nodes, edges, domainStyling, setEdges }) {
         {rootForms.map(n => renderForm(n.id, 0))}
       </div>
 
-      {/* Unallocated nodes tray */}
-      {hasUnallocated && (
-        <div className="callgrid-unallocated">
-          <div className="callgrid-unallocated-header">Unallocated — drag into a form above</div>
-          <div className="callgrid-unallocated-items">
-            {unallocated.functions.map(n => (
-              <div
-                key={n.id}
-                className="callgrid-chip callgrid-chip-func callgrid-chip-draggable"
-                style={{ borderColor: funcColor }}
-                draggable
-                onDragStart={e => e.dataTransfer.setData('text/plain', JSON.stringify({ id: n.id, layer: 'function' }))}
-                title={`Drag to assign: ${n.data?.label}`}
-              >
-                {n.data?.label}
-              </div>
-            ))}
-            {unallocated.failures.map(n => (
-              <div
-                key={n.id}
-                className="callgrid-chip callgrid-chip-fail callgrid-chip-draggable"
-                style={{ borderColor: failColor }}
-                draggable
-                onDragStart={e => e.dataTransfer.setData('text/plain', JSON.stringify({ id: n.id, layer: 'failure' }))}
-                title={`Drag to assign: ${n.data?.label}`}
-              >
-                {n.data?.label}
-              </div>
-            ))}
-          </div>
+      {/* Unallocated nodes tray — always visible */}
+      <div className="callgrid-unallocated">
+        <div className="callgrid-unallocated-header">
+          Unallocated — drag into a form above
         </div>
-      )}
+        <div className="callgrid-unallocated-items">
+          {unallocated.functions.length === 0 && unallocated.failures.length === 0 && (
+            <span className="callgrid-unallocated-empty">All functions and failures are allocated ✓</span>
+          )}
+          {unallocated.functions.map(n => (
+            <div
+              key={n.id}
+              className="callgrid-chip callgrid-chip-func callgrid-chip-draggable"
+              style={{ borderColor: funcColor }}
+              draggable
+              onDragStart={e => e.dataTransfer.setData('text/plain', JSON.stringify({ id: n.id, layer: 'function' }))}
+              title={`Drag to assign: ${n.data?.label}`}
+            >
+              {n.data?.label}
+            </div>
+          ))}
+          {unallocated.failures.map(n => (
+            <div
+              key={n.id}
+              className="callgrid-chip callgrid-chip-fail callgrid-chip-draggable"
+              style={{ borderColor: failColor }}
+              draggable
+              onDragStart={e => e.dataTransfer.setData('text/plain', JSON.stringify({ id: n.id, layer: 'failure' }))}
+              title={`Drag to assign: ${n.data?.label}`}
+            >
+              {n.data?.label}
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -444,9 +466,11 @@ function GraphEditor({ graph, domainInfo, domainStyling, onGraphChange, activeLa
   const [validationError, setValidationError] = useState('');
   const [zoom, setZoom] = useState(1.0);
   const [zoomLocked, setZoomLocked] = useState(false);
+  const [selectedNodeId, setSelectedNodeId] = useState(null);
   const updateTimeoutRef = useRef(null);
   const labelInputRef = useRef(null);
   const nodeSelectRef = useRef(null);
+  const editorRef = useRef(null);
 
   // Grid-based positioning
   const nodePositionGrid = useRef({ x: 60, y: 60, columns: 0 });
@@ -518,6 +542,73 @@ function GraphEditor({ graph, domainInfo, domainStyling, onGraphChange, activeLa
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [zoomLocked]);
+
+  // Tab key: create child node in the active layer when exactly one node is selected
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.key !== 'Tab') return;
+      // Only handle if the editor container is focused (not an input inside it)
+      const active = document.activeElement;
+      if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT')) return;
+      if (!editorRef.current?.contains(active) && active !== document.body) return;
+      if (activeLayer === 'all') return;
+      if (!selectedNodeId) return;
+
+      const parentNode = nodes.find(n => n.id === selectedNodeId);
+      if (!parentNode) return;
+      if (parentNode.data?.layer !== activeLayer) return;
+
+      // Determine child edgeType and label from active layer
+      const layerConfig = {
+        form:     { edgeType: 'form_hierarchy',    label: 'New Form',     nodeTypeLayer: 'form' },
+        function: { edgeType: 'function_flow',      label: 'New Function', nodeTypeLayer: 'function' },
+        failure:  { edgeType: 'failure_propagation',label: 'New Failure',  nodeTypeLayer: 'failure' },
+      };
+      const cfg = layerConfig[activeLayer];
+      if (!cfg) return;
+
+      e.preventDefault();
+
+      // Find matching node type from domainInfo
+      const nt = domainInfo?.node_types?.find(t => t.default_attributes?.layer === cfg.nodeTypeLayer);
+      const nodeStyle = getNodeStyle(nt?.name || '');
+      const icon = nt?.icon || '';
+      const layerColor = domainStyling?.theme?.[`${activeLayer}LayerColor`] || '#6366f1';
+
+      const parentPos = parentNode.position || { x: 60, y: 60 };
+      const childPos = { x: parentPos.x + 220, y: parentPos.y + 60 };
+
+      const childId = `node-${Date.now()}`;
+      const childNode = {
+        id: childId,
+        type: 'default',
+        data: {
+          label: icon ? `${icon} ${cfg.label}` : cfg.label,
+          nodeType: nt?.name || activeLayer,
+          layer: activeLayer,
+          attributes: { ...(nt?.default_attributes || { layer: activeLayer }) },
+        },
+        position: childPos,
+        style: { ...nodeStyle, boxShadow: `0 1px 4px ${layerColor}30` },
+      };
+
+      const childEdge = {
+        id: `e-tab-${Date.now()}`,
+        source: selectedNodeId,
+        target: childId,
+        type: 'default',
+        data: { edgeType: cfg.edgeType },
+        markerEnd: { type: MarkerType.ArrowClosed },
+      };
+
+      setNodes(nds => [...nds, childNode]);
+      setEdges(eds => [...eds, childEdge]);
+      setSelectedNodeId(childId);
+    };
+
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [activeLayer, selectedNodeId, nodes, domainInfo, domainStyling, setNodes, setEdges]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const getNodeStyle = (nodeType) => {
     if (!domainStyling?.node_styles) return {};
@@ -605,7 +696,7 @@ function GraphEditor({ graph, domainInfo, domainStyling, onGraphChange, activeLa
   const zoomReset = () => { if (!zoomLocked) setZoom(1.0); };
 
   return (
-    <div className="graph-editor">
+    <div className="graph-editor" ref={editorRef}>
       {/* Compact add-node toolbar */}
       <div className="graph-toolbar">
         <select
@@ -651,6 +742,9 @@ function GraphEditor({ graph, domainInfo, domainStyling, onGraphChange, activeLa
         {/* Hierarchy connection hint derived from HIERARCHY_HINTS_BY_LAYER */}
         <span className="hierarchy-hint">
           {HIERARCHY_HINTS_BY_LAYER[activeLayer] || ''}
+          {selectedNodeId && activeLayer !== 'all' && (
+            <span className="hierarchy-hint-tab"> · Tab: add child</span>
+          )}
         </span>
       </div>
 
@@ -697,6 +791,8 @@ function GraphEditor({ graph, domainInfo, domainStyling, onGraphChange, activeLa
                 layer="function"
                 childEdgeType="function_flow"
                 accentColor={domainStyling?.theme?.functionLayerColor || '#8b5cf6'}
+                selectedNodeId={selectedNodeId}
+                onNodeSelect={setSelectedNodeId}
               />
             ) : activeLayer === 'failure' ? (
               <CollapsibleHorizontalTree
@@ -705,6 +801,8 @@ function GraphEditor({ graph, domainInfo, domainStyling, onGraphChange, activeLa
                 layer="failure"
                 childEdgeType="failure_propagation"
                 accentColor={domainStyling?.theme?.failureLayerColor || '#ef4444'}
+                selectedNodeId={selectedNodeId}
+                onNodeSelect={setSelectedNodeId}
               />
             ) : activeLayer === 'form' ? (
               <CollapsibleHorizontalTree
@@ -713,6 +811,8 @@ function GraphEditor({ graph, domainInfo, domainStyling, onGraphChange, activeLa
                 layer="form"
                 childEdgeType="form_hierarchy"
                 accentColor={domainStyling?.theme?.formLayerColor || '#3b82f6'}
+                selectedNodeId={selectedNodeId}
+                onNodeSelect={setSelectedNodeId}
               />
             ) : (
               <AllLayersCollapsibleGrid
