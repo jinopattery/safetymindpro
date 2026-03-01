@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { domainsAPI } from '../api/domains';
 import GraphEditor from './GraphEditor';
 import CandlestickChart from './CandlestickChart';
+import ExamplesGallery from './ExamplesGallery';
 import './WorkspacePage.css';
 
 // Default algorithm parameters
@@ -475,6 +476,7 @@ function SaveModal({ isOpen, onClose, onSave }) {
 function WorkspacePage({ user, onLogout }) {
   const { domain: urlDomain } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [, setDomains] = useState([]);
   const [selectedDomain, setSelectedDomain] = useState(urlDomain || null);
@@ -881,6 +883,28 @@ function WorkspacePage({ user, onLogout }) {
     }
   };
 
+  // Load example graph from navigation state (e.g. from Dashboard "Open in workspace")
+  useEffect(() => {
+    if (location.state?.exampleGraph) {
+      setGraph(location.state.exampleGraph);
+      setCurrentGraphId(null);
+      setCurrentGraphName('');
+      // Clear state so refreshing doesn't reload the example
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleLoadExample = useCallback((graphData, domain) => {
+    if (domain && domain !== selectedDomain) {
+      handleDomainChange(domain);
+    }
+    setGraph(graphData);
+    setCurrentGraphId(null);
+    setCurrentGraphName('');
+    setSaveStatus('Example loaded');
+    setTimeout(() => setSaveStatus(''), 3000);
+  }, [selectedDomain]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const domainIcons = {
     automotive: '🚗',
     process_plant: '⚙️',
@@ -972,6 +996,14 @@ function WorkspacePage({ user, onLogout }) {
             >
               <span className="explorer-tab-icon"><HierarchyTabIcon /></span>
               TREE
+            </button>
+            <button
+              className={`explorer-tab-btn${sidebarTab === 'examples' ? ' active' : ''}`}
+              onClick={() => setSidebarTab('examples')}
+              title="Examples Gallery"
+            >
+              <span className="explorer-tab-icon">📂</span>
+              EX
             </button>
           </div>
 
@@ -1082,6 +1114,12 @@ function WorkspacePage({ user, onLogout }) {
               onNodeRename={handleNodeRename}
               onNodeMove={handleNodeMove}
             />
+          )}
+
+          {sidebarTab === 'examples' && (
+            <div className="explorer-examples-wrap">
+              <ExamplesGallery onLoadExample={handleLoadExample} />
+            </div>
           )}
         </aside>
 

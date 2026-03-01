@@ -1,0 +1,207 @@
+{
+  "nodes": [
+    {
+      "id": "form-portfolio",
+      "type": "default",
+      "data": {
+        "label": "🔷 Multi-Country Portfolio",
+        "nodeType": "financial_account",
+        "layer": "form",
+        "attributes": { "layer": "form" }
+      },
+      "position": { "x": 60, "y": 60 },
+      "style": { "background": "#dbeafe", "color": "#1e3a5f", "border": "1px solid #3b82f6", "borderRadius": "4px", "padding": "6px 10px", "fontSize": "12px" }
+    },
+    {
+      "id": "form-eu-equities",
+      "type": "default",
+      "data": {
+        "label": "🔷 European Equities (EU)",
+        "nodeType": "financial_account",
+        "layer": "form",
+        "attributes": { "layer": "form" }
+      },
+      "position": { "x": 240, "y": 60 },
+      "style": { "background": "#dbeafe", "color": "#1e3a5f", "border": "1px solid #3b82f6", "borderRadius": "4px", "padding": "6px 10px", "fontSize": "12px" }
+    },
+    {
+      "id": "form-us-bonds",
+      "type": "default",
+      "data": {
+        "label": "🔷 US Treasury Bonds",
+        "nodeType": "financial_account",
+        "layer": "form",
+        "attributes": { "layer": "form" }
+      },
+      "position": { "x": 420, "y": 60 },
+      "style": { "background": "#dbeafe", "color": "#1e3a5f", "border": "1px solid #3b82f6", "borderRadius": "4px", "padding": "6px 10px", "fontSize": "12px" }
+    },
+    {
+      "id": "form-asia-etf",
+      "type": "default",
+      "data": {
+        "label": "🔷 Asia-Pacific ETF",
+        "nodeType": "financial_account",
+        "layer": "form",
+        "attributes": { "layer": "form" }
+      },
+      "position": { "x": 600, "y": 60 },
+      "style": { "background": "#dbeafe", "color": "#1e3a5f", "border": "1px solid #3b82f6", "borderRadius": "4px", "padding": "6px 10px", "fontSize": "12px" }
+    },
+    {
+      "id": "form-real-estate",
+      "type": "default",
+      "data": {
+        "label": "🔷 Real Estate REIT",
+        "nodeType": "financial_account",
+        "layer": "form",
+        "attributes": { "layer": "form" }
+      },
+      "position": { "x": 780, "y": 60 },
+      "style": { "background": "#dbeafe", "color": "#1e3a5f", "border": "1px solid #3b82f6", "borderRadius": "4px", "padding": "6px 10px", "fontSize": "12px" }
+    },
+    {
+      "id": "func-risk-calc",
+      "type": "default",
+      "data": {
+        "label": "⚙️ Risk Calculation",
+        "nodeType": "financial_process",
+        "layer": "function",
+        "attributes": { "layer": "function" }
+      },
+      "position": { "x": 60, "y": 220 },
+      "style": { "background": "#ede9fe", "color": "#3b0764", "border": "1px solid #8b5cf6", "borderRadius": "4px", "padding": "6px 10px", "fontSize": "12px" }
+    },
+    {
+      "id": "func-return-opt",
+      "type": "default",
+      "data": {
+        "label": "⚙️ Return Optimisation",
+        "nodeType": "financial_process",
+        "layer": "function",
+        "attributes": { "layer": "function" }
+      },
+      "position": { "x": 240, "y": 220 },
+      "style": { "background": "#ede9fe", "color": "#3b0764", "border": "1px solid #8b5cf6", "borderRadius": "4px", "padding": "6px 10px", "fontSize": "12px" }
+    },
+    {
+      "id": "func-asset-alloc",
+      "type": "default",
+      "data": {
+        "label": "⚙️ Asset Allocation",
+        "nodeType": "financial_process",
+        "layer": "function",
+        "attributes": { "layer": "function" }
+      },
+      "position": { "x": 420, "y": 220 },
+      "style": { "background": "#ede9fe", "color": "#3b0764", "border": "1px solid #8b5cf6", "borderRadius": "4px", "padding": "6px 10px", "fontSize": "12px" }
+    },
+    {
+      "id": "func-rebalancing",
+      "type": "default",
+      "data": {
+        "label": "⚙️ Portfolio Rebalancing",
+        "nodeType": "financial_process",
+        "layer": "function",
+        "attributes": { "layer": "function" }
+      },
+      "position": { "x": 600, "y": 220 },
+      "style": { "background": "#ede9fe", "color": "#3b0764", "border": "1px solid #8b5cf6", "borderRadius": "4px", "padding": "6px 10px", "fontSize": "12px" }
+    },
+    {
+      "id": "func-fx-hedging",
+      "type": "default",
+      "data": {
+        "label": "⚙️ FX Hedging",
+        "nodeType": "financial_process",
+        "layer": "function",
+        "attributes": { "layer": "function" }
+      },
+      "position": { "x": 780, "y": 220 },
+      "style": { "background": "#ede9fe", "color": "#3b0764", "border": "1px solid #8b5cf6", "borderRadius": "4px", "padding": "6px 10px", "fontSize": "12px" }
+    },
+    {
+      "id": "fail-market-risk",
+      "type": "default",
+      "data": {
+        "label": "⚠️ Market Risk",
+        "nodeType": "financial_risk",
+        "layer": "failure",
+        "attributes": { "layer": "failure" }
+      },
+      "position": { "x": 60, "y": 380 },
+      "style": { "background": "#fee2e2", "color": "#7f1d1d", "border": "1px solid #ef4444", "borderRadius": "4px", "padding": "6px 10px", "fontSize": "12px" }
+    },
+    {
+      "id": "fail-liquidity",
+      "type": "default",
+      "data": {
+        "label": "⚠️ Liquidity Risk",
+        "nodeType": "financial_risk",
+        "layer": "failure",
+        "attributes": { "layer": "failure" }
+      },
+      "position": { "x": 240, "y": 380 },
+      "style": { "background": "#fee2e2", "color": "#7f1d1d", "border": "1px solid #ef4444", "borderRadius": "4px", "padding": "6px 10px", "fontSize": "12px" }
+    },
+    {
+      "id": "fail-currency",
+      "type": "default",
+      "data": {
+        "label": "⚠️ Currency Risk",
+        "nodeType": "financial_risk",
+        "layer": "failure",
+        "attributes": { "layer": "failure" }
+      },
+      "position": { "x": 420, "y": 380 },
+      "style": { "background": "#fee2e2", "color": "#7f1d1d", "border": "1px solid #ef4444", "borderRadius": "4px", "padding": "6px 10px", "fontSize": "12px" }
+    },
+    {
+      "id": "fail-counterparty",
+      "type": "default",
+      "data": {
+        "label": "⚠️ Counterparty Default",
+        "nodeType": "financial_risk",
+        "layer": "failure",
+        "attributes": { "layer": "failure" }
+      },
+      "position": { "x": 600, "y": 380 },
+      "style": { "background": "#fee2e2", "color": "#7f1d1d", "border": "1px solid #ef4444", "borderRadius": "4px", "padding": "6px 10px", "fontSize": "12px" }
+    },
+    {
+      "id": "fail-concentration",
+      "type": "default",
+      "data": {
+        "label": "⚠️ Concentration Risk",
+        "nodeType": "financial_risk",
+        "layer": "failure",
+        "attributes": { "layer": "failure" }
+      },
+      "position": { "x": 780, "y": 380 },
+      "style": { "background": "#fee2e2", "color": "#7f1d1d", "border": "1px solid #ef4444", "borderRadius": "4px", "padding": "6px 10px", "fontSize": "12px" }
+    }
+  ],
+  "edges": [
+    { "id": "e1",  "source": "form-portfolio",   "target": "form-eu-equities",  "type": "default", "data": { "edgeType": "form_hierarchy" }, "markerEnd": { "type": "arrowclosed" } },
+    { "id": "e2",  "source": "form-portfolio",   "target": "form-us-bonds",     "type": "default", "data": { "edgeType": "form_hierarchy" }, "markerEnd": { "type": "arrowclosed" } },
+    { "id": "e3",  "source": "form-portfolio",   "target": "form-asia-etf",     "type": "default", "data": { "edgeType": "form_hierarchy" }, "markerEnd": { "type": "arrowclosed" } },
+    { "id": "e4",  "source": "form-portfolio",   "target": "form-real-estate",  "type": "default", "data": { "edgeType": "form_hierarchy" }, "markerEnd": { "type": "arrowclosed" } },
+    { "id": "e5",  "source": "func-risk-calc",   "target": "func-return-opt",   "type": "default", "data": { "edgeType": "function_flow" },  "markerEnd": { "type": "arrowclosed" } },
+    { "id": "e6",  "source": "func-return-opt",  "target": "func-asset-alloc",  "type": "default", "data": { "edgeType": "function_flow" },  "markerEnd": { "type": "arrowclosed" } },
+    { "id": "e7",  "source": "func-asset-alloc", "target": "func-rebalancing",  "type": "default", "data": { "edgeType": "function_flow" },  "markerEnd": { "type": "arrowclosed" } },
+    { "id": "e8",  "source": "func-rebalancing", "target": "func-fx-hedging",   "type": "default", "data": { "edgeType": "function_flow" },  "markerEnd": { "type": "arrowclosed" } },
+    { "id": "e9",  "source": "fail-market-risk", "target": "fail-concentration","type": "default", "data": { "edgeType": "failure_propagation" }, "markerEnd": { "type": "arrowclosed" } },
+    { "id": "e10", "source": "fail-liquidity",   "target": "fail-counterparty", "type": "default", "data": { "edgeType": "failure_propagation" }, "markerEnd": { "type": "arrowclosed" } },
+    { "id": "e11", "source": "fail-currency",    "target": "fail-concentration","type": "default", "data": { "edgeType": "failure_propagation" }, "markerEnd": { "type": "arrowclosed" } },
+    { "id": "e12", "source": "form-portfolio",   "target": "func-risk-calc",    "type": "default", "data": { "edgeType": "performs_function" }, "markerEnd": { "type": "arrowclosed" } },
+    { "id": "e13", "source": "form-portfolio",   "target": "func-asset-alloc",  "type": "default", "data": { "edgeType": "performs_function" }, "markerEnd": { "type": "arrowclosed" } },
+    { "id": "e14", "source": "form-eu-equities", "target": "func-return-opt",   "type": "default", "data": { "edgeType": "performs_function" }, "markerEnd": { "type": "arrowclosed" } },
+    { "id": "e15", "source": "form-asia-etf",    "target": "func-fx-hedging",   "type": "default", "data": { "edgeType": "performs_function" }, "markerEnd": { "type": "arrowclosed" } },
+    { "id": "e16", "source": "form-us-bonds",    "target": "func-rebalancing",  "type": "default", "data": { "edgeType": "performs_function" }, "markerEnd": { "type": "arrowclosed" } },
+    { "id": "e17", "source": "form-portfolio",   "target": "fail-market-risk",  "type": "default", "data": { "edgeType": "has_failure" },       "markerEnd": { "type": "arrowclosed" } },
+    { "id": "e18", "source": "form-eu-equities", "target": "fail-concentration","type": "default", "data": { "edgeType": "has_failure" },       "markerEnd": { "type": "arrowclosed" } },
+    { "id": "e19", "source": "form-us-bonds",    "target": "fail-counterparty", "type": "default", "data": { "edgeType": "has_failure" },       "markerEnd": { "type": "arrowclosed" } },
+    { "id": "e20", "source": "form-asia-etf",    "target": "fail-currency",     "type": "default", "data": { "edgeType": "has_failure" },       "markerEnd": { "type": "arrowclosed" } },
+    { "id": "e21", "source": "form-real-estate", "target": "fail-liquidity",    "type": "default", "data": { "edgeType": "has_failure" },       "markerEnd": { "type": "arrowclosed" } }
+  ]
+}

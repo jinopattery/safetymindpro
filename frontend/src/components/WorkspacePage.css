@@ -979,3 +979,40 @@
   border-radius: 3px;
 }
 
+
+/* ── Examples Gallery sidebar wrapper ───────────────────────────── */
+.explorer-examples-wrap {
+  padding: 10px 8px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.explorer-examples-wrap .eg-section {
+  margin-top: 0;
+}
+
+.explorer-examples-wrap .eg-title {
+  font-size: 0.68rem;
+}
+
+.explorer-examples-wrap .eg-card {
+  padding: 8px 10px;
+  gap: 8px;
+}
+
+.explorer-examples-wrap .eg-card-icon {
+  font-size: 1.2rem;
+}
+
+.explorer-examples-wrap .eg-card-title {
+  font-size: 0.74rem;
+}
+
+.explorer-examples-wrap .eg-card-desc {
+  display: none;
+}
+
+.explorer-examples-wrap .eg-btn {
+  font-size: 0.68rem;
+  padding: 4px 8px;
+}

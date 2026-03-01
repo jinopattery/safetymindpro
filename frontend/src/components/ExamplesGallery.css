@@ -1,0 +1,150 @@
+/* ── Examples Gallery ───────────────────────────────────────────── */
+.eg-section {
+  margin-top: 24px;
+}
+
+.eg-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.eg-header-icon {
+  font-size: 1.1rem;
+}
+
+.eg-title {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #e2e8f0;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.eg-error {
+  font-size: 0.78rem;
+  color: #f87171;
+  background: rgba(239,68,68,0.12);
+  border: 1px solid rgba(239,68,68,0.3);
+  border-radius: 6px;
+  padding: 6px 10px;
+  margin-bottom: 10px;
+}
+
+.eg-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.eg-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: #1e2228;
+  border: 1px solid #2d3139;
+  border-radius: 7px;
+  padding: 10px 12px;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.eg-card:hover {
+  border-color: #4b5563;
+  background: #252a33;
+}
+
+.eg-card-icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.eg-card-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.eg-card-domain {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #6366f1;
+  margin-bottom: 2px;
+}
+
+.eg-card-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #e2e8f0;
+  margin-bottom: 3px;
+}
+
+.eg-card-desc {
+  font-size: 0.72rem;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+.eg-card-actions {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-end;
+}
+
+.eg-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  border-radius: 5px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.eg-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.eg-btn-primary {
+  background: #4f46e5;
+  color: #fff;
+  border-color: #4f46e5;
+}
+
+.eg-btn-primary:not(:disabled):hover {
+  background: #4338ca;
+  border-color: #4338ca;
+}
+
+/* ── Variant styles when used inside the workspace (light theme) ─── */
+.eg-section--workspace .eg-title {
+  color: #1e293b;
+}
+
+.eg-section--workspace .eg-card {
+  background: #f8fafc;
+  border-color: #e5e7eb;
+}
+
+.eg-section--workspace .eg-card:hover {
+  border-color: #6366f1;
+  background: #f1f5ff;
+}
+
+.eg-section--workspace .eg-card-title {
+  color: #1e293b;
+}
+
+.eg-section--workspace .eg-card-desc {
+  color: #64748b;
+}
